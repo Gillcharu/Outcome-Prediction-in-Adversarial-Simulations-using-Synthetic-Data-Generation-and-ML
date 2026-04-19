@@ -1,93 +1,72 @@
 # Outcome Prediction in Adversarial Simulations using Synthetic Data Generation and ML
 
-This project predicts the probability of success in a strategy-game attack using synthetic battle simulations and machine learning. It does not depend on real battle logs. Instead, it generates thousands of battles with rule-based interactions, trains a regression model on the synthetic data, and recommends stronger attack strategies for a selected defending base.
+[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-Web%20App-000000?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-F7931E?style=flat-square&logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
+[![CI](https://img.shields.io/github/actions/workflow/status/Gillcharu/Outcome-Prediction-in-Adversarial-Simulations-using-Synthetic-Data-Generation-and-ML/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Gillcharu/Outcome-Prediction-in-Adversarial-Simulations-using-Synthetic-Data-Generation-and-ML/actions)
 
-## Why this project stands out
+This project predicts the probability of success in a strategy-game attack using synthetic battle simulations and machine learning. Instead of relying on real battle logs, it generates a large synthetic dataset with rule-based combat logic, trains a regression model on those simulated outcomes, and recommends stronger attacking strategies for a selected defending base.
 
-- It predicts a probability of success instead of only returning `win` or `lose`.
-- It creates its own dataset through synthetic battle simulation.
-- It combines prediction with brute-force recommendation, turning the model into a decision-support tool.
+![Project Preview](docs/images/project-preview.png)
 
-## Core idea
+## Overview
 
-The system models a battle as a relationship between:
+The project combines three connected ideas:
 
-- the attacking setup
-- the defending base
-- the interaction between troop style and defensive pressure
+- synthetic data generation for adversarial simulations
+- machine learning for outcome probability prediction
+- brute-force recommendation for better strategy selection
 
-Examples of rule-based simulation logic:
+This makes the project more than a basic classifier. It is a full decision-support pipeline that can estimate success and recommend what to do next.
 
-- air-heavy armies are penalized by strong anti-air defenses
-- ground-heavy armies are affected by walls, inferno pressure, and splash-heavy layouts
-- siege machines and clan castle support change matchup quality
-- pets, heroes, guardians, and spells shift the strength of different attack styles
+## Why this project is strong
 
-These simulated battles are used to build a dataset, which is then used to train a `RandomForestRegressor` to estimate `win_probability`.
+- It predicts a probability instead of only returning `win` or `lose`.
+- It creates its own dataset through rule-based synthetic simulation.
+- It supports a large feature space across attack and defense composition.
+- It uses a trained ML model and a recommendation layer on top.
+- It includes a web app and API, making it easy to demonstrate.
+
+## Problem statement
+
+Real battle data is not always available for strategy-game research projects. To solve that, this project simulates battles using domain-inspired rules such as:
+
+- air-heavy armies struggle against strong anti-air defenses
+- ground pushes are affected by walls, infernos, and splash structures
+- siege machines and clan castle choices change matchup quality
+- spells, heroes, pets, and guardians influence style-specific effectiveness
+
+These simulations are used to build a supervised learning dataset with `win_probability` as the target.
+
+## System workflow
+
+```text
+Attack Input + Base Input
+        ->
+Synthetic Battle Simulation
+        ->
+Generated Dataset
+        ->
+Random Forest Regression Model
+        ->
+Win Probability Prediction
+        ->
+Brute-Force Strategy Recommendation
+```
 
 ## Features
 
 - Synthetic battle generation using rule-based combat logic
-- Machine learning prediction with `RandomForestRegressor`
-- Full attack input support:
-  - `TROOPS`
-  - `SPELLS`
-  - `HEROES`
-  - `PETS`
-  - `GUARDIANS`
-  - `CLAN CASTLE`
-  - `SIEGE MACHINE`
-- Full defense input support:
-  - `CANNON`
-  - `ARCHER TOWER`
-  - `WALL`
-  - `MORTAR`
-  - `AIR DEFENCE`
-  - `WIZARD TOWER`
-  - `AIR SWEEPER`
-  - `HIDDEN TESLA`
-  - `BOMB TOWER`
-  - `X-BOW`
-  - `INFERNO TOWER`
-  - `EAGLE ARTILLERY`
-  - `SCATTERSHOT`
-  - `SPELL TOWER`
-  - `MONOLITH`
-  - `TRAPS`
-- Web interface for interactive prediction and strategy comparison
-- API endpoint for programmatic access
-- Brute-force strategy recommendation for a selected base
-
-## Project structure
-
-- `battle_simulator.py`
-  Synthetic data generation, attack/base schema, and battle scoring rules.
-- `train_model.py`
-  Dataset generation, model training, evaluation, and artifact export.
-- `recommend_strategy.py`
-  Candidate strategy generation and ranking.
-- `app.py`
-  Flask application for the website and API.
-- `templates/index.html`
-  Main user interface.
-- `static/style.css`
-  Frontend styling.
-- `static/app.js`
-  Frontend interactions and chart rendering.
-- `tests/test_app.py`
-  Basic app-level tests.
-
-## ML pipeline
-
-1. Generate synthetic battles using logical game rules.
-2. Convert attack and defense configurations into tabular features.
-3. Train a `RandomForestRegressor` on `win_probability`.
-4. Use the trained model to score new armies against a target base.
-5. Search through many candidate attack setups and return the strongest options.
+- Probability prediction with `RandomForestRegressor`
+- Detailed attack-side feature support
+- Detailed defense-side feature support
+- Web interface for prediction and strategy comparison
+- JSON API for programmatic access
+- Candidate search for top attacking strategies
 
 ## Inputs modeled
 
-### Attack-side features
+### Attack-side inputs
 
 #### Troops
 
@@ -165,12 +144,12 @@ These simulated battles are used to build a dataset, which is then used to train
 - Air Guardian
 - Healing Guardian
 
-#### Additional attack fields
+#### Other attack settings
 
 - Clan Castle
 - Siege Machine
 
-### Defense-side features
+### Defense-side inputs
 
 - Base Level
 - Cannon
@@ -190,48 +169,97 @@ These simulated battles are used to build a dataset, which is then used to train
 - Monolith
 - Traps
 
+## Machine learning pipeline
+
+1. Generate thousands of synthetic battles.
+2. Convert attack and defense configurations into tabular features.
+3. Train a `RandomForestRegressor` to predict `win_probability`.
+4. Score a user-selected army against a target base.
+5. Search candidate strategies and rank the strongest options.
+
+## Project structure
+
+- `battle_simulator.py`  
+  Synthetic data generation, schema definitions, and battle scoring logic.
+
+- `train_model.py`  
+  Dataset creation, model training, evaluation, and artifact generation.
+
+- `recommend_strategy.py`  
+  Candidate search and ranking for recommended attacking strategies.
+
+- `app.py`  
+  Flask application for the website and API.
+
+- `templates/index.html`  
+  Frontend structure for the web interface.
+
+- `static/style.css`  
+  UI styling.
+
+- `static/app.js`  
+  Frontend interactions and chart rendering.
+
+- `tests/test_app.py`  
+  Basic application tests.
+
 ## Dataset
 
-The generated dataset is saved at:
-
-- [synthetic_battles.csv](/Users/charugill/Documents/New%20project%202/artifacts/synthetic_battles.csv)
+The dataset is generated locally by running `python3 train_model.py`.
 
 It contains:
 
-- feature columns for attack composition
-- feature columns for detailed base defenses
-- aggregate defense pressure features used by the simulator
-- `win_probability` as the prediction target
+- attack composition features
+- detailed defense structure features
+- aggregate defense pressure features
+- `win_probability` as the target variable
 
-## Model
+Current dataset summary:
 
-The project uses:
+- `7000` simulated battles
+- `86` total columns
+- target column: `win_probability`
 
-- `RandomForestRegressor`
+## Model and evaluation
 
-Why regression instead of classification:
+The project uses a `RandomForestRegressor` to estimate battle success probability.
 
-- probability is more informative than a binary label
-- small strategy differences are easier to compare
-- the recommendation system can optimize for highest predicted chance of success
+Current held-out test results:
+
+- `MAE = 0.1056`
+- `RMSE = 0.1568`
+- `R² = 0.5750`
+
+The trained model artifact is generated locally when you run `python3 train_model.py`.
 
 ## Website
 
-The website lets you:
+The web app allows you to:
 
-- enter attack and defense values manually
+- enter army and defense values manually
 - use base presets for quick testing
-- predict the win probability of your selected army
-- compare your army against top recommended strategies
-- inspect summarized attack and defense selections
+- estimate the probability of success for a chosen attack
+- compare your current army with stronger recommended strategies
+- inspect structured summaries of selected attack and defense inputs
 
-Run the app locally and open:
+## Screenshots and preview
+
+The repo includes a visual project preview:
+
+- `docs/images/project-preview.png`
+
+For a stronger professor-facing submission, you can later add real browser screenshots of:
+
+- the attack/base input form
+- the recommendation and results panel
+
+Local URL:
 
 - [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
 ## API
 
-Available endpoints:
+Endpoints:
 
 - `GET /health`
 - `POST /api/predict`
@@ -244,10 +272,29 @@ curl -X POST http://127.0.0.1:5000/api/predict \
   -d '{"troop_barbarian":10,"troop_archer":12,"spell_rage":2,"hero_barbarian_king":80,"defense_cannon":5,"defense_air_defence":7,"base_level":15,"clan_castle":"cc_yeti","siege_machine":"log_launcher"}'
 ```
 
+## GitHub repository settings
+
+Suggested repository description:
+
+`ML project for predicting attack outcomes using synthetic data generation, Random Forest regression, and strategy recommendation.`
+
+Suggested topics:
+
+- `machine-learning`
+- `python`
+- `flask`
+- `random-forest`
+- `scikit-learn`
+- `synthetic-data`
+- `simulation`
+- `predictive-modeling`
+- `web-app`
+
 ## Setup
 
 ```bash
-cd "/Users/charugill/Documents/New project 2"
+git clone https://github.com/Gillcharu/Outcome-Prediction-in-Adversarial-Simulations-using-Synthetic-Data-Generation-and-ML.git
+cd Outcome-Prediction-in-Adversarial-Simulations-using-Synthetic-Data-Generation-and-ML
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -261,7 +308,7 @@ Train the model and generate the dataset:
 python3 train_model.py
 ```
 
-Start the web app:
+Start the app:
 
 ```bash
 python3 app.py
@@ -273,30 +320,34 @@ Run tests:
 python3 -m unittest discover -s tests
 ```
 
-## Output artifacts
-
-- trained model: [model.joblib](/Users/charugill/Documents/New%20project%202/artifacts/model.joblib)
-- generated dataset: [synthetic_battles.csv](/Users/charugill/Documents/New%20project%202/artifacts/synthetic_battles.csv)
-
 ## Deployment
 
-The repo includes:
+The repository already includes:
 
 - `Dockerfile`
 - `Procfile`
 - `gunicorn`
 
-Example Docker flow:
+Example Docker usage:
 
 ```bash
 docker build -t attack-predictor .
 docker run -p 5000:5000 attack-predictor
 ```
 
+## GitHub polish checklist
+
+- README with clear project framing
+- CI workflow for test execution
+- issue templates
+- contributing guide
+- license
+- profile README template
+
 ## Future improvements
 
-- stronger simulation rules based on deeper game mechanics
+- stronger simulation rules with more game-specific mechanics
 - larger candidate search space for recommendations
-- feature importance visualization
-- better frontend filtering and grouping for large input sets
-- deployment with a public demo link
+- feature importance or model explainability views
+- grouped defense filters in the UI
+- deployed public demo
