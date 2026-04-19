@@ -1,110 +1,302 @@
-# Strategy Game Attack Predictor
+# Outcome Prediction in Adversarial Simulations using Synthetic Data Generation and ML
 
-This project builds a machine learning system that predicts the probability of winning an attack in a strategy game and recommends strong attacking strategies against a given base.
+This project predicts the probability of success in a strategy-game attack using synthetic battle simulations and machine learning. It does not depend on real battle logs. Instead, it generates thousands of battles with rule-based interactions, trains a regression model on the synthetic data, and recommends stronger attack strategies for a selected defending base.
 
-## What the project does
+## Why this project stands out
 
-- Generates a synthetic dataset of battles using rule-based game logic.
-- Trains a `RandomForestRegressor` to predict win probability.
-- Accepts attack inputs with troops, spells, heroes, clan castle donation, and siege machines.
-- Evaluates many army combinations and recommends the best strategy for a target base.
+- It predicts a probability of success instead of only returning `win` or `lose`.
+- It creates its own dataset through synthetic battle simulation.
+- It combines prediction with brute-force recommendation, turning the model into a decision-support tool.
+
+## Core idea
+
+The system models a battle as a relationship between:
+
+- the attacking setup
+- the defending base
+- the interaction between troop style and defensive pressure
+
+Examples of rule-based simulation logic:
+
+- air-heavy armies are penalized by strong anti-air defenses
+- ground-heavy armies are affected by walls, inferno pressure, and splash-heavy layouts
+- siege machines and clan castle support change matchup quality
+- pets, heroes, guardians, and spells shift the strength of different attack styles
+
+These simulated battles are used to build a dataset, which is then used to train a `RandomForestRegressor` to estimate `win_probability`.
+
+## Features
+
+- Synthetic battle generation using rule-based combat logic
+- Machine learning prediction with `RandomForestRegressor`
+- Full attack input support:
+  - `TROOPS`
+  - `SPELLS`
+  - `HEROES`
+  - `PETS`
+  - `GUARDIANS`
+  - `CLAN CASTLE`
+  - `SIEGE MACHINE`
+- Full defense input support:
+  - `CANNON`
+  - `ARCHER TOWER`
+  - `WALL`
+  - `MORTAR`
+  - `AIR DEFENCE`
+  - `WIZARD TOWER`
+  - `AIR SWEEPER`
+  - `HIDDEN TESLA`
+  - `BOMB TOWER`
+  - `X-BOW`
+  - `INFERNO TOWER`
+  - `EAGLE ARTILLERY`
+  - `SCATTERSHOT`
+  - `SPELL TOWER`
+  - `MONOLITH`
+  - `TRAPS`
+- Web interface for interactive prediction and strategy comparison
+- API endpoint for programmatic access
+- Brute-force strategy recommendation for a selected base
 
 ## Project structure
 
-- `battle_simulator.py`: synthetic data generation and battle scoring rules
-- `train_model.py`: dataset creation, model training, and model persistence
-- `recommend_strategy.py`: brute-force search for the best attack setup
-- `app.py`: Flask web application for prediction and recommendations
-- `requirements.txt`: Python dependencies
+- `battle_simulator.py`
+  Synthetic data generation, attack/base schema, and battle scoring rules.
+- `train_model.py`
+  Dataset generation, model training, evaluation, and artifact export.
+- `recommend_strategy.py`
+  Candidate strategy generation and ranking.
+- `app.py`
+  Flask application for the website and API.
+- `templates/index.html`
+  Main user interface.
+- `static/style.css`
+  Frontend styling.
+- `static/app.js`
+  Frontend interactions and chart rendering.
+- `tests/test_app.py`
+  Basic app-level tests.
 
-## Setup
+## ML pipeline
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python train_model.py
-python recommend_strategy.py
-python app.py
-```
+1. Generate synthetic battles using logical game rules.
+2. Convert attack and defense configurations into tabular features.
+3. Train a `RandomForestRegressor` on `win_probability`.
+4. Use the trained model to score new armies against a target base.
+5. Search through many candidate attack setups and return the strongest options.
 
 ## Inputs modeled
 
-The attacker configuration includes:
+### Attack-side features
 
-- Troops
-- Spells
-- Heroes
-- Clan castle donation
-- Siege machines
+#### Troops
 
-The defender configuration includes:
+- Barbarian
+- Archer
+- Wizard
+- Goblin
+- Giant
+- Wall Breaker
+- Balloon
+- Healer
+- Dragon
+- P.E.K.K.A
+- Baby Dragon
+- Miner
+- Electro Dragon
+- Yeti
+- Dragon Rider
+- Electro Titan
+- Root Rider
+- Thrower
+- Meteor Golem
+- Minion
+- Hog Rider
+- Valkyrie
+- Golem
+- Witch
+- Lava Hound
+- Bowler
+- Ice Golem
+- Apprentice Warden
+- Headhunter
+- Druid
+- Furnace
 
-- Base level
-- Anti-air defense
-- Splash defense
-- Wall strength
-- Inferno strength
-- Trap pressure
+#### Spells
 
-## Output
+- Lightning
+- Heal
+- Rage
+- Jump
+- Freeze
+- Clone
+- Invisibility
+- Recall
+- Revive
+- Totem
+- Poison
+- Earthquake
+- Haste
+- Skeleton
+- Bat
+- Overgrowth
+- Ice Block
 
-The trained model predicts a win probability from `0` to `1`. The recommender searches candidate armies and returns the setup with the highest predicted success probability.
+#### Heroes
+
+- Barbarian King
+- Archer Queen
+- Minion Prince
+- Grand Warden
+- Royal Champion
+- Dragon Duke
+
+#### Pets
+
+- L.A.S.S.I
+- Electro Owl
+- Mighty Yak
+- Unicorn
+
+#### Guardians
+
+- Ground Guardian
+- Air Guardian
+- Healing Guardian
+
+#### Additional attack fields
+
+- Clan Castle
+- Siege Machine
+
+### Defense-side features
+
+- Base Level
+- Cannon
+- Archer Tower
+- Wall
+- Mortar
+- Air Defence
+- Wizard Tower
+- Air Sweeper
+- Hidden Tesla
+- Bomb Tower
+- X-Bow
+- Inferno Tower
+- Eagle Artillery
+- Scattershot
+- Spell Tower
+- Monolith
+- Traps
+
+## Dataset
+
+The generated dataset is saved at:
+
+- [synthetic_battles.csv](/Users/charugill/Documents/New%20project%202/artifacts/synthetic_battles.csv)
+
+It contains:
+
+- feature columns for attack composition
+- feature columns for detailed base defenses
+- aggregate defense pressure features used by the simulator
+- `win_probability` as the prediction target
+
+## Model
+
+The project uses:
+
+- `RandomForestRegressor`
+
+Why regression instead of classification:
+
+- probability is more informative than a binary label
+- small strategy differences are easier to compare
+- the recommendation system can optimize for highest predicted chance of success
 
 ## Website
 
-The website provides:
+The website lets you:
 
-- A form for entering troops, spells, heroes, clan castle donation, siege machine, and base defenses
-- One-click base presets for common defending styles
-- A predicted win percentage for the selected army
-- A recommended best strategy for the same defending base
-- A ranked shortlist of top candidate attack plans
-- A visual comparison chart between your army and the top candidate strategies
+- enter attack and defense values manually
+- use base presets for quick testing
+- predict the win probability of your selected army
+- compare your army against top recommended strategies
+- inspect summarized attack and defense selections
+
+Run the app locally and open:
+
+- [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
 ## API
 
-The project also includes JSON endpoints:
+Available endpoints:
 
 - `GET /health`
 - `POST /api/predict`
 
-Example JSON body:
+Example:
 
-```json
-{
-  "troop_barbarian": 12,
-  "troop_archer": 16,
-  "troop_giant": 8,
-  "troop_wizard": 10,
-  "troop_dragon": 4,
-  "troop_balloon": 6,
-  "troop_healer": 2,
-  "troop_pekka": 3,
-  "spell_rage": 2,
-  "spell_heal": 2,
-  "spell_freeze": 2,
-  "spell_lightning": 1,
-  "hero_king": 75,
-  "hero_queen": 80,
-  "hero_warden": 55,
-  "hero_champion": 30,
-  "clan_castle": "cc_yeti",
-  "siege_machine": "log_launcher",
-  "base_level": 14,
-  "anti_air_defense": 7,
-  "splash_defense": 6,
-  "wall_strength": 7,
-  "inferno_strength": 7,
-  "trap_pressure": 5
-}
+```bash
+curl -X POST http://127.0.0.1:5000/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"troop_barbarian":10,"troop_archer":12,"spell_rage":2,"hero_barbarian_king":80,"defense_cannon":5,"defense_air_defence":7,"base_level":15,"clan_castle":"cc_yeti","siege_machine":"log_launcher"}'
 ```
+
+## Setup
+
+```bash
+cd "/Users/charugill/Documents/New project 2"
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Run locally
+
+Train the model and generate the dataset:
+
+```bash
+python3 train_model.py
+```
+
+Start the web app:
+
+```bash
+python3 app.py
+```
+
+Run tests:
+
+```bash
+python3 -m unittest discover -s tests
+```
+
+## Output artifacts
+
+- trained model: [model.joblib](/Users/charugill/Documents/New%20project%202/artifacts/model.joblib)
+- generated dataset: [synthetic_battles.csv](/Users/charugill/Documents/New%20project%202/artifacts/synthetic_battles.csv)
 
 ## Deployment
 
-The repo is ready for simple deployment with:
+The repo includes:
 
-- `gunicorn`
-- `Procfile`
 - `Dockerfile`
-- `.gitignore`
+- `Procfile`
+- `gunicorn`
+
+Example Docker flow:
+
+```bash
+docker build -t attack-predictor .
+docker run -p 5000:5000 attack-predictor
+```
+
+## Future improvements
+
+- stronger simulation rules based on deeper game mechanics
+- larger candidate search space for recommendations
+- feature importance visualization
+- better frontend filtering and grouping for large input sets
+- deployment with a public demo link
