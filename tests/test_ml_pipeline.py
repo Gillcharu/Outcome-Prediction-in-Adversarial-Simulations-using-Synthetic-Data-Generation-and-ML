@@ -1,9 +1,8 @@
+import random
 import unittest
 
-import random
-
-from battle_simulator import DEFENSE_TYPES, candidate_attacks, generate_dataset
-from battle_simulator import AttackConfig, BaseConfig, battle_score
+from battle_simulator import DEFENSE_TYPES, MAX_ARMY_CAPACITY, TROOP_HOUSING_SPACE, candidate_attacks, generate_dataset
+from battle_simulator import AttackConfig, BaseConfig, battle_score, random_attack_config
 from recommend_strategy import load_feature_importance, load_metrics, recommend_for_base
 
 
@@ -22,6 +21,9 @@ class MLPipelineTestCase(unittest.TestCase):
         candidates = candidate_attacks()
         self.assertGreater(len(candidates), 0)
         self.assertTrue(any(candidate.siege_machine for candidate in candidates))
+        for candidate in candidates:
+            total_capacity = sum(candidate.troops[name] * TROOP_HOUSING_SPACE[name] for name in candidate.troops)
+            self.assertLessEqual(total_capacity, MAX_ARMY_CAPACITY)
 
     def test_recommendation_returns_ranked_predictions(self):
         base = BaseConfig(
@@ -127,6 +129,27 @@ class MLPipelineTestCase(unittest.TestCase):
         low_score = battle_score(air_attack, low_aa_base, rng)
         high_score = battle_score(air_attack, high_aa_base, random.Random(7))
         self.assertGreater(low_score, high_score)
+
+    def test_random_attack_respects_capacity(self):
+        attack = random_attack_config(random.Random(13))
+        total_capacity = sum(attack.troops[name] * TROOP_HOUSING_SPACE[name] for name in attack.troops)
+        self.assertLessEqual(total_capacity, MAX_ARMY_CAPACITY)
+
+    def test_battle_score_is_deterministic_without_noise(self):
+        attack = candidate_attacks()[0]
+        base = BaseConfig(
+            base_level=15,
+            anti_air_defense=40.0,
+            ground_pressure=35.0,
+            splash_defense=30.0,
+            wall_strength=26.0,
+            inferno_strength=28.0,
+            trap_pressure=20.0,
+            defenses={name: 5 for name in DEFENSE_TYPES},
+        )
+        score_a = battle_score(attack, base, random.Random(21))
+        score_b = battle_score(attack, base, random.Random(99))
+        self.assertEqual(score_a, score_b)
 
 
 if __name__ == "__main__":

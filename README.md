@@ -256,9 +256,9 @@ The project uses a `RandomForestRegressor` to estimate battle success probabilit
 
 Current held-out test results:
 
-- `MAE = 0.1893`
-- `RMSE = 0.2344`
-- `R² = 0.6239`
+- `MAE = 0.0008`
+- `RMSE = 0.0036`
+- `R² = 0.3227`
 
 Generated artifacts after training:
 
@@ -298,7 +298,7 @@ Example:
 ```bash
 curl -X POST http://127.0.0.1:5000/api/predict \
   -H "Content-Type: application/json" \
-  -d '{"troop_barbarian":10,"troop_archer":12,"spell_rage":2,"hero_barbarian_king":80,"defense_cannon":5,"defense_air_defence":7,"base_level":15,"clan_castle":"cc_yeti","siege_machine":"log_launcher"}'
+  -d '{"base_level":15,"clan_castle":"cc_yeti","siege_machine":"log_launcher","troop_barbarian":10,"troop_archer":12,"troop_wizard":8,"troop_goblin":0,"troop_giant":6,"troop_wall_breaker":4,"troop_balloon":6,"troop_healer":4,"troop_dragon":4,"troop_pekka":3,"troop_baby_dragon":0,"troop_miner":8,"troop_electro_dragon":0,"troop_yeti":0,"troop_dragon_rider":0,"troop_electro_titan":0,"troop_root_rider":0,"troop_thrower":0,"troop_meteor_golem":0,"troop_minion":0,"troop_hog_rider":6,"troop_valkyrie":0,"troop_golem":0,"troop_witch":4,"troop_lava_hound":0,"troop_bowler":0,"troop_ice_golem":0,"troop_apprentice_warden":0,"troop_headhunter":0,"troop_druid":0,"troop_furnace":0,"spell_lightning":1,"spell_heal":2,"spell_rage":2,"spell_jump":1,"spell_freeze":2,"spell_clone":0,"spell_invisibility":0,"spell_recall":0,"spell_revive":0,"spell_totem":0,"spell_poison":0,"spell_earthquake":0,"spell_haste":0,"spell_skeleton":0,"spell_bat":0,"spell_overgrowth":0,"spell_ice_block":0,"hero_barbarian_king":80,"hero_archer_queen":82,"hero_minion_prince":55,"hero_grand_warden":60,"hero_royal_champion":32,"hero_dragon_duke":30,"pet_lassi":7,"pet_electro_owl":8,"pet_mighty_yak":7,"pet_unicorn":9,"guardian_ground_guardian":6,"guardian_air_guardian":6,"guardian_healing_guardian":7,"defense_cannon":5,"defense_archer_tower":5,"defense_wall":7,"defense_mortar":5,"defense_air_defence":7,"defense_wizard_tower":6,"defense_air_sweeper":5,"defense_hidden_tesla":6,"defense_bomb_tower":5,"defense_xbow":6,"defense_inferno_tower":6,"defense_eagle_artillery":5,"defense_scattershot":5,"defense_spell_tower":5,"defense_monolith":5,"defense_traps":5}'
 ```
 
 ## GitHub repository settings

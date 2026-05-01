@@ -156,6 +156,42 @@ TROOP_MAX_COUNTS = {
     "furnace": 6,
 }
 
+TROOP_HOUSING_SPACE = {
+    "barbarian": 1,
+    "archer": 1,
+    "wizard": 4,
+    "goblin": 1,
+    "giant": 5,
+    "wall_breaker": 2,
+    "balloon": 5,
+    "healer": 14,
+    "dragon": 20,
+    "pekka": 25,
+    "baby_dragon": 10,
+    "miner": 6,
+    "electro_dragon": 30,
+    "yeti": 18,
+    "dragon_rider": 25,
+    "electro_titan": 32,
+    "root_rider": 20,
+    "thrower": 6,
+    "meteor_golem": 30,
+    "minion": 2,
+    "hog_rider": 5,
+    "valkyrie": 8,
+    "golem": 30,
+    "witch": 12,
+    "lava_hound": 30,
+    "bowler": 6,
+    "ice_golem": 15,
+    "apprentice_warden": 20,
+    "headhunter": 6,
+    "druid": 16,
+    "furnace": 18,
+}
+MAX_ARMY_CAPACITY = 320
+DEFAULT_DATASET_SAMPLES = 7000
+
 SPELL_MAX_COUNTS = {spell: 4 for spell in SPELL_TYPES}
 SPELL_MAX_COUNTS.update({"clone": 2, "recall": 2, "revive": 2, "totem": 2})
 
@@ -325,6 +361,36 @@ def merge_setup(keys: List[str], updates: Dict[str, int]) -> Dict[str, int]:
     return values
 
 
+def enforce_army_capacity(troops: Dict[str, int], capacity: int = MAX_ARMY_CAPACITY) -> Dict[str, int]:
+    adjusted = dict(troops)
+    total_capacity = sum(adjusted[name] * TROOP_HOUSING_SPACE[name] for name in TROOP_TYPES)
+    if total_capacity <= capacity:
+        return adjusted
+
+    ranked = sorted(
+        TROOP_TYPES,
+        key=lambda name: (
+            adjusted[name] * TROOP_HOUSING_SPACE[name],
+            TROOP_HOUSING_SPACE[name],
+            adjusted[name],
+        ),
+        reverse=True,
+    )
+    while total_capacity > capacity:
+        changed = False
+        for troop in ranked:
+            if adjusted[troop] <= 0:
+                continue
+            adjusted[troop] -= 1
+            total_capacity -= TROOP_HOUSING_SPACE[troop]
+            changed = True
+            if total_capacity <= capacity:
+                break
+        if not changed:
+            break
+    return adjusted
+
+
 @dataclass(frozen=True)
 class AttackConfig:
     troops: Mapping[str, int]
@@ -376,6 +442,7 @@ def aggregate_base_metrics(defenses: Dict[str, int]) -> Dict[str, float]:
 
 def random_attack_config(rng: random.Random) -> AttackConfig:
     troops = {name: rng.randint(0, TROOP_MAX_COUNTS[name]) for name in TROOP_TYPES}
+    troops = enforce_army_capacity(troops)
     spells = {name: rng.randint(0, SPELL_MAX_COUNTS[name]) for name in SPELL_TYPES}
     heroes = {name: rng.randint(0, HERO_MAX_LEVELS[name]) for name in HERO_TYPES}
     pets = {name: rng.randint(0, PET_MAX_LEVELS[name]) for name in PET_TYPES}
@@ -521,7 +588,7 @@ def attack_phase_profile(attack: AttackConfig) -> Dict[str, float]:
     }
 
 
-def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> float:
+def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random, include_noise: bool = False) -> float:
     profile = attack_phase_profile(attack)
     air_power = profile["air_power"]
     ground_power = profile["ground_power"]
@@ -593,7 +660,8 @@ def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> 
     elif attack.clan_castle == "cc_ice_golem":
         score += support_power * 0.1 + attack.spells["freeze"] * 0.8
 
-    score += rng.uniform(-8.0, 8.0)
+    if include_noise:
+        score += rng.uniform(-8.0, 8.0)
     # Centering at 50.0 and scaling by 11.0 keeps the synthetic probabilities
     # spread across a useful midrange instead of collapsing toward 0 or 1.
     probability = 1.0 / (1.0 + math.exp(-(score - 50.0) / 11.0))
@@ -632,7 +700,7 @@ def flatten_base_config(base: BaseConfig) -> Dict[str, int | float]:
     return row
 
 
-def generate_dataset(num_samples: int = 5000, seed: int = 42) -> pd.DataFrame:
+def generate_dataset(num_samples: int = DEFAULT_DATASET_SAMPLES, seed: int = 42) -> pd.DataFrame:
     rng = random.Random(seed)
     rows: List[Dict[str, int | float | str]] = []
     for _ in range(num_samples):
@@ -641,7 +709,7 @@ def generate_dataset(num_samples: int = 5000, seed: int = 42) -> pd.DataFrame:
         row: Dict[str, int | float | str] = {}
         row.update(flatten_attack_config(attack))
         row.update(flatten_base_config(base))
-        row["win_probability"] = battle_score(attack, base, rng)
+        row["win_probability"] = battle_score(attack, base, rng, include_noise=False)
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -659,14 +727,14 @@ def candidate_attacks() -> List[AttackConfig]:
     guardian_defaults = {"ground_guardian": 7, "air_guardian": 7, "healing_guardian": 8}
 
     troop_options = [
-        merge_setup(TROOP_TYPES, {"electro_dragon": 8, "dragon_rider": 6, "balloon": 10, "baby_dragon": 4, "minion": 8}),
-        merge_setup(TROOP_TYPES, {"yeti": 8, "electro_titan": 4, "root_rider": 6, "wizard": 8, "healer": 4, "apprentice_warden": 2, "wall_breaker": 6}),
-        merge_setup(TROOP_TYPES, {"miner": 14, "hog_rider": 12, "healer": 4, "wizard": 6, "headhunter": 3, "ice_golem": 2}),
-        merge_setup(TROOP_TYPES, {"pekka": 5, "bowler": 10, "witch": 6, "golem": 2, "ice_golem": 2, "wall_breaker": 6}),
-        merge_setup(TROOP_TYPES, {"dragon": 8, "balloon": 12, "lava_hound": 2, "minion": 10, "baby_dragon": 3}),
-        merge_setup(TROOP_TYPES, {"root_rider": 8, "valkyrie": 8, "wizard": 8, "healer": 3, "apprentice_warden": 2}),
-        merge_setup(TROOP_TYPES, {"golem": 3, "witch": 10, "bowler": 8, "ice_golem": 2, "wall_breaker": 6}),
-        merge_setup(TROOP_TYPES, {"miner": 12, "hog_rider": 10, "headhunter": 4, "healer": 4, "apprentice_warden": 2}),
+        enforce_army_capacity(merge_setup(TROOP_TYPES, {"electro_dragon": 8, "dragon_rider": 6, "balloon": 10, "baby_dragon": 4, "minion": 8})),
+        enforce_army_capacity(merge_setup(TROOP_TYPES, {"yeti": 8, "electro_titan": 4, "root_rider": 6, "wizard": 8, "healer": 4, "apprentice_warden": 2, "wall_breaker": 6})),
+        enforce_army_capacity(merge_setup(TROOP_TYPES, {"miner": 14, "hog_rider": 12, "healer": 4, "wizard": 6, "headhunter": 3, "ice_golem": 2})),
+        enforce_army_capacity(merge_setup(TROOP_TYPES, {"pekka": 5, "bowler": 10, "witch": 6, "golem": 2, "ice_golem": 2, "wall_breaker": 6})),
+        enforce_army_capacity(merge_setup(TROOP_TYPES, {"dragon": 8, "balloon": 12, "lava_hound": 2, "minion": 10, "baby_dragon": 3})),
+        enforce_army_capacity(merge_setup(TROOP_TYPES, {"root_rider": 8, "valkyrie": 8, "wizard": 8, "healer": 3, "apprentice_warden": 2})),
+        enforce_army_capacity(merge_setup(TROOP_TYPES, {"golem": 3, "witch": 10, "bowler": 8, "ice_golem": 2, "wall_breaker": 6})),
+        enforce_army_capacity(merge_setup(TROOP_TYPES, {"miner": 12, "hog_rider": 10, "headhunter": 4, "healer": 4, "apprentice_warden": 2})),
     ]
 
     spell_options = [
@@ -718,6 +786,7 @@ def mutate_attack_config(attack: AttackConfig, variant_index: int) -> AttackConf
             troops[name] = max(0, min(TROOP_MAX_COUNTS[name], troops[name] + delta))
         elif name in spells:
             spells[name] = max(0, min(SPELL_MAX_COUNTS[name], spells[name] + delta))
+    troops = enforce_army_capacity(troops)
 
     pet_cycle = ["electro_owl", "mighty_yak", "unicorn", "lassi"]
     guardian_cycle = ["air_guardian", "ground_guardian", "healing_guardian"]

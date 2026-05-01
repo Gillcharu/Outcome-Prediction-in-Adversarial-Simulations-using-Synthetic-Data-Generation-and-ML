@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-from battle_simulator import generate_dataset
+from battle_simulator import DEFAULT_DATASET_SAMPLES, generate_dataset
 
 
 MODEL_PATH = Path("artifacts/model.joblib")
@@ -23,7 +23,7 @@ FEATURE_IMPORTANCE_PATH = Path("artifacts/feature_importance.csv")
 
 
 def train_and_save_model(
-    num_samples: int = 7000,
+    num_samples: int = DEFAULT_DATASET_SAMPLES,
     seed: int = 42,
 ) -> tuple[Pipeline, pd.DataFrame, dict[str, float]]:
     artifacts_dir = MODEL_PATH.parent
