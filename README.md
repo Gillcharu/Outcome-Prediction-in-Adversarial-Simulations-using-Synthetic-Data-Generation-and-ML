@@ -7,8 +7,6 @@
 
 This project predicts the probability of success in a strategy-game attack using synthetic battle simulations and machine learning. Instead of relying on real battle logs, it generates a large synthetic dataset with rule-based combat logic, trains a regression model on those simulated outcomes, and recommends stronger attacking strategies for a selected defending base.
 
-![Project Preview](docs/images/project-preview.png)
-
 ## Overview
 
 The project combines three connected ideas:
@@ -241,17 +239,6 @@ The web app allows you to:
 - estimate the probability of success for a chosen attack
 - compare your current army with stronger recommended strategies
 - inspect structured summaries of selected attack and defense inputs
-
-## Screenshots and preview
-
-The repo includes a visual project preview:
-
-- `docs/images/project-preview.png`
-
-For a stronger professor-facing submission, you can later add real browser screenshots of:
-
-- the attack/base input form
-- the recommendation and results panel
 
 Local URL:
 
