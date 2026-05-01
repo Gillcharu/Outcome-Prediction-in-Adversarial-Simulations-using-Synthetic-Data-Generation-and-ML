@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
+from pathlib import Path
 from typing import Any, Dict
 
 import pandas as pd
@@ -16,6 +18,11 @@ from battle_simulator import (
     SIEGE_TYPES,
     SPELL_TYPES,
     TROOP_TYPES,
+    GUARDIAN_MAX_LEVELS,
+    HERO_MAX_LEVELS,
+    PET_MAX_LEVELS,
+    SPELL_MAX_COUNTS,
+    TROOP_MAX_COUNTS,
     aggregate_base_metrics,
     flatten_base_config,
 )
@@ -23,7 +30,36 @@ from recommend_strategy import load_feature_importance, load_metrics, load_or_tr
 
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "attack-strategy-local-secret")
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
+
+
+def load_local_env() -> None:
+    env_path = Path(".env")
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
+
+
+def configure_secret_key() -> str:
+    secret = os.environ.get("FLASK_SECRET_KEY")
+    env_name = os.environ.get("FLASK_ENV", "development").lower()
+    if secret:
+        return secret
+    if env_name == "production":
+        raise RuntimeError("FLASK_SECRET_KEY must be set when FLASK_ENV=production.")
+    logging.getLogger(__name__).warning(
+        "FLASK_SECRET_KEY is not set. Falling back to a local development secret."
+    )
+    return "attack-strategy-local-secret"
+
+
+load_local_env()
+app.secret_key = configure_secret_key()
 MODEL = load_or_train_model()
 
 
@@ -212,6 +248,14 @@ def build_default_form() -> dict[str, int | str]:
 
 DEFAULT_FORM = build_default_form()
 SESSION_KEY = "planner_form"
+API_REQUIRED_FIELDS = {"base_level", "clan_castle", "siege_machine"}
+NUMERIC_LIMITS: dict[str, tuple[int, int]] = {"base_level": (1, 20)}
+NUMERIC_LIMITS.update({f"troop_{name}": (0, TROOP_MAX_COUNTS[name]) for name in TROOP_TYPES})
+NUMERIC_LIMITS.update({f"spell_{name}": (0, SPELL_MAX_COUNTS[name]) for name in SPELL_TYPES})
+NUMERIC_LIMITS.update({f"hero_{name}": (0, HERO_MAX_LEVELS[name]) for name in HERO_TYPES})
+NUMERIC_LIMITS.update({f"pet_{name}": (0, PET_MAX_LEVELS[name]) for name in PET_TYPES})
+NUMERIC_LIMITS.update({f"guardian_{name}": (0, GUARDIAN_MAX_LEVELS[name]) for name in GUARDIAN_TYPES})
+NUMERIC_LIMITS.update({f"defense_{name}": (0, 10) for name in DEFENSE_TYPES})
 
 
 def parse_int(form: Dict[str, str], key: str, fallback: int) -> int:
@@ -219,6 +263,45 @@ def parse_int(form: Dict[str, str], key: str, fallback: int) -> int:
         return int(form.get(key, fallback))
     except (TypeError, ValueError):
         return fallback
+
+
+def validate_api_payload(body: Dict[str, Any]) -> tuple[dict[str, str], list[str]]:
+    errors: list[str] = []
+    cleaned: dict[str, str] = {}
+
+    for field in API_REQUIRED_FIELDS:
+        if field not in body:
+            errors.append(f"Missing required field: {field}")
+
+    allowed_fields = set(NUMERIC_LIMITS) | {"clan_castle", "siege_machine"}
+    unknown_fields = sorted(set(body) - allowed_fields)
+    if unknown_fields:
+        errors.append(f"Unknown fields: {', '.join(unknown_fields)}")
+
+    for key, value in body.items():
+        if key in NUMERIC_LIMITS:
+            low, high = NUMERIC_LIMITS[key]
+            try:
+                parsed = int(value)
+            except (TypeError, ValueError):
+                errors.append(f"{key} must be an integer.")
+                continue
+            if parsed < low or parsed > high:
+                errors.append(f"{key} must be between {low} and {high}.")
+                continue
+            cleaned[key] = str(parsed)
+        elif key == "clan_castle":
+            if value not in CLAN_CASTLE_TYPES:
+                errors.append(f"clan_castle must be one of: {', '.join(CLAN_CASTLE_TYPES)}")
+            else:
+                cleaned[key] = str(value)
+        elif key == "siege_machine":
+            if value not in SIEGE_TYPES:
+                errors.append(f"siege_machine must be one of: {', '.join(SIEGE_TYPES)}")
+            else:
+                cleaned[key] = str(value)
+
+    return cleaned, errors
 
 
 def extract_inputs(form: Dict[str, str]) -> tuple[dict[str, int | float | str], BaseConfig]:
@@ -263,6 +346,7 @@ def extract_inputs(form: Dict[str, str]) -> tuple[dict[str, int | float | str], 
     base = BaseConfig(
         base_level=parse_int(form, "base_level", int(DEFAULT_FORM["base_level"])),
         anti_air_defense=metrics["anti_air_defense"],
+        ground_pressure=metrics["ground_pressure"],
         splash_defense=metrics["splash_defense"],
         wall_strength=metrics["wall_strength"],
         inferno_strength=metrics["inferno_strength"],
@@ -507,8 +591,15 @@ def reset():
 @app.route("/api/predict", methods=["POST"])
 def api_predict():
     body = request.get_json(silent=True) or {}
-    payload = {key: str(value) for key, value in body.items()}
-    return jsonify(run_analysis(payload))
+    payload, errors = validate_api_payload(body)
+    if errors:
+        return jsonify({"errors": errors}), 400
+
+    try:
+        return jsonify(run_analysis(payload))
+    except Exception as exc:
+        app.logger.exception("Prediction request failed")
+        return jsonify({"error": "Prediction request failed.", "details": str(exc)}), 500
 
 
 @app.route("/health", methods=["GET"])

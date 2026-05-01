@@ -27,6 +27,7 @@ class MLPipelineTestCase(unittest.TestCase):
         base = BaseConfig(
             base_level=15,
             anti_air_defense=10.0,
+            ground_pressure=10.0,
             splash_defense=10.0,
             wall_strength=10.0,
             inferno_strength=10.0,
@@ -105,6 +106,7 @@ class MLPipelineTestCase(unittest.TestCase):
         low_aa_base = BaseConfig(
             base_level=15,
             anti_air_defense=25.0,
+            ground_pressure=22.0,
             splash_defense=35.0,
             wall_strength=22.0,
             inferno_strength=24.0,
@@ -114,6 +116,7 @@ class MLPipelineTestCase(unittest.TestCase):
         high_aa_base = BaseConfig(
             base_level=15,
             anti_air_defense=80.0,
+            ground_pressure=58.0,
             splash_defense=35.0,
             wall_strength=22.0,
             inferno_strength=24.0,

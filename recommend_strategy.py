@@ -16,6 +16,7 @@ from battle_simulator import (
     SPELL_TYPES,
     TROOP_TYPES,
     candidate_attacks,
+    aggregate_base_metrics,
     flatten_attack_config,
     flatten_base_config,
     mutate_attack_config,
@@ -31,14 +32,17 @@ def load_or_train_model():
 
     model = joblib.load(MODEL_PATH)
     try:
+        sample_defenses = {name: 5 for name in DEFENSE_TYPES}
+        sample_metrics = aggregate_base_metrics(sample_defenses)
         sample_base = BaseConfig(
             base_level=14,
-            anti_air_defense=7,
-            splash_defense=6,
-            wall_strength=7,
-            inferno_strength=7,
-            trap_pressure=5,
-            defenses={name: 5 for name in DEFENSE_TYPES},
+            anti_air_defense=sample_metrics["anti_air_defense"],
+            ground_pressure=sample_metrics["ground_pressure"],
+            splash_defense=sample_metrics["splash_defense"],
+            wall_strength=sample_metrics["wall_strength"],
+            inferno_strength=sample_metrics["inferno_strength"],
+            trap_pressure=sample_metrics["trap_pressure"],
+            defenses=sample_defenses,
         )
         sample_row = {}
         sample_row.update(flatten_attack_config(candidate_attacks()[0]))
@@ -184,14 +188,17 @@ def strategy_snapshot(row: pd.Series) -> dict[str, Any]:
 
 
 def main() -> None:
+    base_defenses = {name: 5 for name in DEFENSE_TYPES}
+    base_metrics = aggregate_base_metrics(base_defenses)
     base = BaseConfig(
         base_level=14,
-        anti_air_defense=8,
-        splash_defense=7,
-        wall_strength=8,
-        inferno_strength=7,
-        trap_pressure=6,
-        defenses={name: 5 for name in DEFENSE_TYPES},
+        anti_air_defense=base_metrics["anti_air_defense"],
+        ground_pressure=base_metrics["ground_pressure"],
+        splash_defense=base_metrics["splash_defense"],
+        wall_strength=base_metrics["wall_strength"],
+        inferno_strength=base_metrics["inferno_strength"],
+        trap_pressure=base_metrics["trap_pressure"],
+        defenses=base_defenses,
     )
     ranked = recommend_for_base(base)
     best = ranked.iloc[0]

@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from itertools import product
 import math
+from types import MappingProxyType
 import random
-from typing import Dict, List, Tuple
+from typing import Dict, List, Mapping, Tuple
 
 import pandas as pd
 
@@ -167,6 +168,19 @@ HERO_MAX_LEVELS = {
     "dragon_duke": 45,
 }
 
+PET_MAX_LEVELS = {
+    "lassi": 10,
+    "electro_owl": 10,
+    "mighty_yak": 10,
+    "unicorn": 10,
+}
+
+GUARDIAN_MAX_LEVELS = {
+    "ground_guardian": 10,
+    "air_guardian": 10,
+    "healing_guardian": 10,
+}
+
 TROOP_AIR_POWER = {
     "archer": 0.15,
     "wizard": 0.35,
@@ -313,13 +327,20 @@ def merge_setup(keys: List[str], updates: Dict[str, int]) -> Dict[str, int]:
 
 @dataclass(frozen=True)
 class AttackConfig:
-    troops: Dict[str, int]
-    spells: Dict[str, int]
-    heroes: Dict[str, int]
-    pets: Dict[str, int]
-    guardians: Dict[str, int]
+    troops: Mapping[str, int]
+    spells: Mapping[str, int]
+    heroes: Mapping[str, int]
+    pets: Mapping[str, int]
+    guardians: Mapping[str, int]
     clan_castle: str
     siege_machine: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "troops", MappingProxyType(dict(self.troops)))
+        object.__setattr__(self, "spells", MappingProxyType(dict(self.spells)))
+        object.__setattr__(self, "heroes", MappingProxyType(dict(self.heroes)))
+        object.__setattr__(self, "pets", MappingProxyType(dict(self.pets)))
+        object.__setattr__(self, "guardians", MappingProxyType(dict(self.guardians)))
 
 
 @dataclass(frozen=True)
@@ -330,12 +351,17 @@ class BaseConfig:
     wall_strength: float
     inferno_strength: float
     trap_pressure: float
-    defenses: Dict[str, int] = field(default_factory=dict)
+    ground_pressure: float
+    defenses: Mapping[str, int] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "defenses", MappingProxyType(dict(self.defenses)))
 
 
 def aggregate_base_metrics(defenses: Dict[str, int]) -> Dict[str, float]:
     return {
         "anti_air_defense": sum(defenses.get(name, 0) * weight for name, weight in DEFENSE_AIR_WEIGHTS.items()),
+        "ground_pressure": sum(defenses.get(name, 0) * weight for name, weight in DEFENSE_GROUND_WEIGHTS.items()),
         "splash_defense": sum(defenses.get(name, 0) * weight for name, weight in DEFENSE_SPLASH_WEIGHTS.items()),
         "wall_strength": sum(defenses.get(name, 0) * weight for name, weight in DEFENSE_WALL_WEIGHTS.items()),
         "inferno_strength": (
@@ -352,8 +378,8 @@ def random_attack_config(rng: random.Random) -> AttackConfig:
     troops = {name: rng.randint(0, TROOP_MAX_COUNTS[name]) for name in TROOP_TYPES}
     spells = {name: rng.randint(0, SPELL_MAX_COUNTS[name]) for name in SPELL_TYPES}
     heroes = {name: rng.randint(0, HERO_MAX_LEVELS[name]) for name in HERO_TYPES}
-    pets = {name: rng.randint(0, 10) for name in PET_TYPES}
-    guardians = {name: rng.randint(0, 10) for name in GUARDIAN_TYPES}
+    pets = {name: rng.randint(0, PET_MAX_LEVELS[name]) for name in PET_TYPES}
+    guardians = {name: rng.randint(0, GUARDIAN_MAX_LEVELS[name]) for name in GUARDIAN_TYPES}
     return AttackConfig(
         troops=troops,
         spells=spells,
@@ -371,6 +397,7 @@ def random_base_config(rng: random.Random) -> BaseConfig:
     return BaseConfig(
         base_level=rng.randint(9, 17),
         anti_air_defense=metrics["anti_air_defense"],
+        ground_pressure=metrics["ground_pressure"],
         splash_defense=metrics["splash_defense"],
         wall_strength=metrics["wall_strength"],
         inferno_strength=metrics["inferno_strength"],
@@ -390,21 +417,18 @@ def attack_style_scores(attack: AttackConfig) -> Tuple[float, float, float]:
     support_power += sum(attack.spells[name] * weight for name, weight in SPELL_SUPPORT_POWER.items())
 
     hero_boost = sum(attack.heroes.values()) * 0.05
-    pet_boost = (
-        attack.pets["electro_owl"] * 0.9
-        + attack.pets["mighty_yak"] * 0.9
-        + attack.pets["lassi"] * 0.6
-        + attack.pets["unicorn"] * 1.0
-    )
-    guardian_boost = (
-        attack.guardians["air_guardian"] * 0.8
-        + attack.guardians["ground_guardian"] * 0.8
-        + attack.guardians["healing_guardian"] * 0.9
-    )
-
     air_power += attack.pets["electro_owl"] * 0.8 + attack.guardians["air_guardian"] * 0.8
-    ground_power += attack.pets["mighty_yak"] * 0.8 + attack.guardians["ground_guardian"] * 0.8
-    support_power += hero_boost + pet_boost * 0.35 + guardian_boost
+    ground_power += (
+        attack.pets["mighty_yak"] * 0.8
+        + attack.guardians["ground_guardian"] * 0.8
+        + attack.pets["lassi"] * 0.45
+    )
+    support_power += (
+        hero_boost
+        + attack.pets["unicorn"] * 1.0
+        + attack.guardians["healing_guardian"] * 1.0
+        + attack.pets["lassi"] * 0.15
+    )
 
     return air_power, ground_power, support_power
 
@@ -503,7 +527,6 @@ def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> 
     ground_power = profile["ground_power"]
     support_power = profile["support_power"]
 
-    ground_pressure = sum(base.defenses.get(name, 0) * weight for name, weight in DEFENSE_GROUND_WEIGHTS.items())
     attack_total = air_power + ground_power + support_power
     defense_total = (
         base.anti_air_defense * 1.05
@@ -511,7 +534,7 @@ def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> 
         + base.wall_strength * 1.15
         + base.inferno_strength * 1.2
         + base.trap_pressure * 0.9
-        + ground_pressure * 0.24
+        + base.ground_pressure * 0.24
         + base.base_level * 6.0
     )
 
@@ -557,7 +580,7 @@ def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> 
     elif attack.siege_machine == "siege_barracks":
         score += ground_power * 0.15 + support_power * 0.08
     elif attack.siege_machine == "flame_flinger":
-        score += support_power * 0.12 + max(0.0, 14.0 - ground_pressure * 0.08)
+        score += support_power * 0.12 + max(0.0, 14.0 - base.ground_pressure * 0.08)
     elif attack.siege_machine == "battle_drill":
         score += ground_power * 0.16 + max(0.0, 14.0 - base.wall_strength * 0.3)
 
@@ -598,6 +621,7 @@ def flatten_base_config(base: BaseConfig) -> Dict[str, int | float]:
     row: Dict[str, int | float] = {
         "base_level": base.base_level,
         "anti_air_defense": base.anti_air_defense,
+        "ground_pressure": base.ground_pressure,
         "splash_defense": base.splash_defense,
         "wall_strength": base.wall_strength,
         "inferno_strength": base.inferno_strength,

@@ -32,18 +32,18 @@ class AppRoutesTestCase(unittest.TestCase):
             "spell_heal": 2,
             "spell_freeze": 2,
             "spell_lightning": 1,
-            "hero_king": 75,
-            "hero_queen": 80,
-            "hero_warden": 55,
-            "hero_champion": 30,
+            "hero_barbarian_king": 75,
+            "hero_archer_queen": 80,
+            "hero_grand_warden": 55,
+            "hero_royal_champion": 30,
             "clan_castle": "cc_yeti",
             "siege_machine": "log_launcher",
             "base_level": 14,
-            "anti_air_defense": 7,
-            "splash_defense": 6,
-            "wall_strength": 7,
-            "inferno_strength": 7,
-            "trap_pressure": 5,
+            "defense_cannon": 5,
+            "defense_air_defence": 7,
+            "defense_wall": 7,
+            "defense_inferno_tower": 7,
+            "defense_traps": 5,
         }
         response = self.client.post("/api/predict", json=payload)
         body = response.get_json()
@@ -53,6 +53,16 @@ class AppRoutesTestCase(unittest.TestCase):
         self.assertIn("recommendation", body)
         self.assertIn("top_recommendations", body)
         self.assertIn("chart_data", body)
+
+    def test_api_predict_rejects_invalid_payload(self):
+        response = self.client.post(
+            "/api/predict",
+            json={"troop_barbarian": -1, "clan_castle": "bad_cc", "siege_machine": "bad_siege"},
+        )
+        body = response.get_json()
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("errors", body)
 
 
 if __name__ == "__main__":
