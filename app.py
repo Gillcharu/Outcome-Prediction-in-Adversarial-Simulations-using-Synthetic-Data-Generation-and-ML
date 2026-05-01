@@ -20,10 +20,12 @@ from battle_simulator import (
     flatten_base_config,
 )
 from recommend_strategy import load_or_train_model, recommend_for_base
+from recommend_strategy import load_metrics, strategy_snapshot
 
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "attack-strategy-local-secret")
+MODEL = load_or_train_model()
 
 
 SPECIAL_DISPLAY_NAMES = {
@@ -56,8 +58,10 @@ SPECIAL_DISPLAY_NAMES = {
     "wall_wrecker": "Wall Wrecker",
     "battle_blimp": "Battle Blimp",
     "stone_slammer": "Stone Slammer",
+    "siege_barracks": "Siege Barracks",
     "log_launcher": "Log Launcher",
     "flame_flinger": "Flame Flinger",
+    "battle_drill": "Battle Drill",
     "air_defence": "Air Defence",
     "air_sweeper": "Air Sweeper",
     "hidden_tesla": "Hidden Tesla",
@@ -304,6 +308,7 @@ def format_plan(row: pd.Series) -> dict[str, Any]:
                 values.append({"name": DISPLAY_NAMES[key], "value": value})
         return values
 
+    snapshot = strategy_snapshot(row)
     return {
         "probability": float(row["predicted_win_probability"]),
         "clan_castle": DISPLAY_NAMES[str(row["clan_castle"])],
@@ -313,6 +318,8 @@ def format_plan(row: pd.Series) -> dict[str, Any]:
         "heroes": collect("hero", HERO_TYPES),
         "pets": collect("pet", PET_TYPES),
         "guardians": collect("guardian", GUARDIAN_TYPES),
+        "archetype": snapshot["archetype"],
+        "reasons": snapshot["reasons"],
     }
 
 
@@ -346,10 +353,10 @@ def build_insights(prediction: float, recommendation: dict[str, Any] | None) -> 
 
 def run_analysis(form: Dict[str, str]) -> dict[str, Any]:
     payload, base = extract_inputs(form)
-    model = load_or_train_model()
-    prediction = predict_probability(model, payload)
+    metrics = load_metrics()
+    prediction = predict_probability(MODEL, payload)
 
-    ranked = recommend_for_base(base).head(3)
+    ranked = recommend_for_base(base, model=MODEL).head(3)
     top_recommendations = [format_plan(row) for _, row in ranked.iterrows()]
     recommendation = top_recommendations[0] if top_recommendations else None
 
@@ -362,6 +369,7 @@ def run_analysis(form: Dict[str, str]) -> dict[str, Any]:
         "army_summary": summarize_payload(payload),
         "defense_summary": summarize_defenses(base),
         "base_summary": flatten_base_config(base),
+        "metrics": metrics,
     }
 
 
@@ -462,6 +470,7 @@ def results():
         insights=analysis["insights"],
         army_summary=analysis["army_summary"],
         defense_summary=analysis["defense_summary"],
+        metrics=analysis["metrics"],
         step="results",
         **common_context(),
     )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from itertools import product
+import math
 import random
 from typing import Dict, List, Tuple
 
@@ -95,11 +96,10 @@ SIEGE_TYPES = [
     "wall_wrecker",
     "battle_blimp",
     "stone_slammer",
-    "barracks",
+    "siege_barracks",
     "log_launcher",
     "flame_flinger",
-    "drill",
-    "launcher",
+    "battle_drill",
 ]
 
 DEFENSE_TYPES = [
@@ -436,14 +436,12 @@ def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> 
         score += air_power * 0.22 - base.anti_air_defense * 0.2
     elif attack.siege_machine == "stone_slammer":
         score += air_power * 0.25 - base.anti_air_defense * 0.18
-    elif attack.siege_machine == "barracks":
+    elif attack.siege_machine == "siege_barracks":
         score += ground_power * 0.15 + support_power * 0.08
     elif attack.siege_machine == "flame_flinger":
         score += support_power * 0.12 + max(0.0, 14.0 - ground_pressure * 0.08)
-    elif attack.siege_machine == "drill":
+    elif attack.siege_machine == "battle_drill":
         score += ground_power * 0.16 + max(0.0, 14.0 - base.wall_strength * 0.3)
-    elif attack.siege_machine == "launcher":
-        score += air_power * 0.12 + ground_power * 0.12
 
     if attack.clan_castle == "cc_balloon":
         score += air_power * 0.12 - base.anti_air_defense * 0.12
@@ -455,7 +453,9 @@ def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> 
         score += support_power * 0.1 + attack.spells["freeze"] * 0.8
 
     score += rng.uniform(-8.0, 8.0)
-    probability = 1.0 / (1.0 + pow(2.71828, -(score - 50.0) / 11.0))
+    # Centering at 50.0 and scaling by 11.0 keeps the synthetic probabilities
+    # spread across a useful midrange instead of collapsing toward 0 or 1.
+    probability = 1.0 / (1.0 + math.exp(-(score - 50.0) / 11.0))
     return max(0.0, min(1.0, probability))
 
 
@@ -521,12 +521,18 @@ def candidate_attacks() -> List[AttackConfig]:
         merge_setup(TROOP_TYPES, {"yeti": 8, "electro_titan": 4, "root_rider": 6, "wizard": 8, "healer": 4, "apprentice_warden": 2, "wall_breaker": 6}),
         merge_setup(TROOP_TYPES, {"miner": 14, "hog_rider": 12, "healer": 4, "wizard": 6, "headhunter": 3, "ice_golem": 2}),
         merge_setup(TROOP_TYPES, {"pekka": 5, "bowler": 10, "witch": 6, "golem": 2, "ice_golem": 2, "wall_breaker": 6}),
+        merge_setup(TROOP_TYPES, {"dragon": 8, "balloon": 12, "lava_hound": 2, "minion": 10, "baby_dragon": 3}),
+        merge_setup(TROOP_TYPES, {"root_rider": 8, "valkyrie": 8, "wizard": 8, "healer": 3, "apprentice_warden": 2}),
+        merge_setup(TROOP_TYPES, {"golem": 3, "witch": 10, "bowler": 8, "ice_golem": 2, "wall_breaker": 6}),
+        merge_setup(TROOP_TYPES, {"miner": 12, "hog_rider": 10, "headhunter": 4, "healer": 4, "apprentice_warden": 2}),
     ]
 
     spell_options = [
         merge_setup(SPELL_TYPES, {"rage": 3, "freeze": 3, "clone": 1, "haste": 1}),
         merge_setup(SPELL_TYPES, {"heal": 3, "rage": 2, "freeze": 1, "jump": 1}),
         merge_setup(SPELL_TYPES, {"invisibility": 2, "freeze": 2, "rage": 2, "recall": 1}),
+        merge_setup(SPELL_TYPES, {"lightning": 3, "freeze": 2, "rage": 1, "earthquake": 1}),
+        merge_setup(SPELL_TYPES, {"heal": 2, "jump": 2, "rage": 2, "poison": 1}),
     ]
 
     attacks: List[AttackConfig] = []

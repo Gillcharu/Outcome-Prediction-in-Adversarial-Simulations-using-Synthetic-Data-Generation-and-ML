@@ -476,6 +476,16 @@ select:focus {
   gap: 16px;
 }
 
+.embedded-card {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.archetype-line {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .compact {
   margin-bottom: 0;
 }
@@ -566,6 +576,34 @@ select:focus {
   font-size: 1.2rem;
 }
 
+.metrics-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-chip {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(23, 32, 31, 0.06);
+  display: grid;
+  gap: 8px;
+}
+
+.metric-chip span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.metric-chip strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.35rem;
+}
+
 @media (max-width: 1100px) {
   .hero,
   .layout,
@@ -573,6 +611,7 @@ select:focus {
   .quick-intro,
   .split-inputs,
   .summary-grid,
+  .metrics-mini-grid,
   .preset-grid,
   .compact-grid-large,
   .compact-grid-base,

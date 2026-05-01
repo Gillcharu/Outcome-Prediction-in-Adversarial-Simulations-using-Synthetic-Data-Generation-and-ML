@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import json
+import math
 from pathlib import Path
 
 import joblib
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
@@ -16,12 +18,14 @@ from battle_simulator import generate_dataset
 
 MODEL_PATH = Path("artifacts/model.joblib")
 DATA_PATH = Path("artifacts/synthetic_battles.csv")
+METRICS_PATH = Path("artifacts/metrics.json")
+FEATURE_IMPORTANCE_PATH = Path("artifacts/feature_importance.csv")
 
 
 def train_and_save_model(
     num_samples: int = 7000,
     seed: int = 42,
-) -> tuple[Pipeline, pd.DataFrame, float, float]:
+) -> tuple[Pipeline, pd.DataFrame, dict[str, float]]:
     artifacts_dir = MODEL_PATH.parent
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -65,19 +69,43 @@ def train_and_save_model(
 
     predictions = model.predict(X_test)
     mae = mean_absolute_error(y_test, predictions)
+    rmse = math.sqrt(mean_squared_error(y_test, predictions))
     r2 = r2_score(y_test, predictions)
 
+    preprocessor_step = model.named_steps["preprocessor"]
+    regressor_step = model.named_steps["regressor"]
+    feature_names = preprocessor_step.get_feature_names_out()
+    importances = pd.DataFrame(
+        {
+            "feature": feature_names,
+            "importance": regressor_step.feature_importances_,
+        }
+    ).sort_values("importance", ascending=False)
+    importances.to_csv(FEATURE_IMPORTANCE_PATH, index=False)
+
+    metrics = {
+        "mae": float(mae),
+        "rmse": float(rmse),
+        "r2": float(r2),
+        "training_samples": float(len(df)),
+        "test_samples": float(len(X_test)),
+    }
+    METRICS_PATH.write_text(json.dumps(metrics, indent=2))
+
     joblib.dump(model, MODEL_PATH)
-    return model, df, mae, r2
+    return model, df, metrics
 
 
 def main() -> None:
-    _, _, mae, r2 = train_and_save_model()
+    _, _, metrics = train_and_save_model()
 
     print(f"Saved synthetic dataset to {DATA_PATH}")
     print(f"Saved trained model to {MODEL_PATH}")
-    print(f"MAE: {mae:.4f}")
-    print(f"R^2: {r2:.4f}")
+    print(f"Saved metrics to {METRICS_PATH}")
+    print(f"Saved feature importances to {FEATURE_IMPORTANCE_PATH}")
+    print(f"MAE: {metrics['mae']:.4f}")
+    print(f"RMSE: {metrics['rmse']:.4f}")
+    print(f"R^2: {metrics['r2']:.4f}")
 
 
 if __name__ == "__main__":

@@ -41,6 +41,7 @@
                 <div>
                   <span class="metric-label">Best recommended strategy</span>
                   <h3>{{ "%.1f"|format(recommendation.probability * 100) }}% expected win rate</h3>
+                  <p class="archetype-line">{{ recommendation.archetype }}</p>
                 </div>
                 <div class="tags">
                   <span>{{ recommendation.clan_castle }}</span>
@@ -70,6 +71,13 @@
                   <ul>{% for item in recommendation.guardians %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul>
                 </div>
               </div>
+
+              {% if recommendation.reasons %}
+                <div class="insights-card embedded-card">
+                  <h3>Why this strategy fits</h3>
+                  <ul class="insights-list">{% for reason in recommendation.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+                </div>
+              {% endif %}
             </div>
           {% endif %}
 
@@ -87,6 +95,30 @@
         </div>
 
         <aside class="results-side">
+          {% if metrics %}
+            <div class="summary-card">
+              <h3>Model Snapshot</h3>
+              <div class="metrics-mini-grid">
+                <div class="metric-chip">
+                  <span>R²</span>
+                  <strong>{{ "%.4f"|format(metrics.r2) }}</strong>
+                </div>
+                <div class="metric-chip">
+                  <span>RMSE</span>
+                  <strong>{{ "%.4f"|format(metrics.rmse) }}</strong>
+                </div>
+                <div class="metric-chip">
+                  <span>MAE</span>
+                  <strong>{{ "%.4f"|format(metrics.mae) }}</strong>
+                </div>
+                <div class="metric-chip">
+                  <span>Samples</span>
+                  <strong>{{ metrics.training_samples|int }}</strong>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
           {% if insights %}
             <div class="insights-card">
               <h3>Key Insights</h3>
