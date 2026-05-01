@@ -10,7 +10,7 @@ This project predicts the probability of success in a strategy-game attack using
 ## 30-second summary
 
 - `Problem`: predict attack success without access to real battle logs
-- `Approach`: simulate battles, train a Random Forest regressor, and recommend stronger strategies
+- `Approach`: simulate battles, train a Random Forest regressor, and rank stronger strategies
 - `Stack`: Python, Flask, scikit-learn, pandas, NumPy
 - `Output`: win probability plus recommendation reasoning
 - `Interface`: multi-page web flow with attack setup, defence setup, and results
@@ -21,7 +21,7 @@ The project combines three connected ideas:
 
 - synthetic data generation for adversarial simulations
 - machine learning for outcome probability prediction
-- brute-force recommendation for better strategy selection
+- candidate-search recommendation for better strategy selection
 
 This makes the project more than a basic classifier. It is a full decision-support pipeline that can estimate success and recommend what to do next.
 
@@ -57,7 +57,7 @@ Random Forest Regression Model
         ->
 Win Probability Prediction
         ->
-Brute-Force Strategy Recommendation
+Candidate Strategy Recommendation
 ```
 
 ## Features
@@ -253,9 +253,9 @@ The project uses a `RandomForestRegressor` to estimate battle success probabilit
 
 Current held-out test results:
 
-- `MAE = 0.1056`
-- `RMSE = 0.1568`
-- `R² = 0.5750`
+- `MAE = 0.0933`
+- `RMSE = 0.1455`
+- `R² = 0.6028`
 
 Generated artifacts after training:
 
@@ -372,6 +372,12 @@ docker run -p 5000:5000 attack-predictor
 
 - stronger simulation rules with more game-specific mechanics
 - larger candidate search space for recommendations
-- feature importance or model explainability views
+- interactive feature importance and model explainability views
 - grouped defense filters in the UI
 - deployed public demo
+
+## Current limitations
+
+- The simulator is intentionally lightweight and does not model full game mechanics such as troop pathing, detailed targeting priorities, or time-based DPS interactions.
+- The training labels come from the rule-based simulator, so the model should be interpreted as an approximation of the simulator rather than a predictor validated on real battle logs.
+- Strategy recommendation currently searches a curated candidate pool, which improves speed and consistency but is not yet a true optimization algorithm.
