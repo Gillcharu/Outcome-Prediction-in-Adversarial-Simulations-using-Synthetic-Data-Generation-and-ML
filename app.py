@@ -29,10 +29,6 @@ from battle_simulator import (
 from recommend_strategy import load_feature_importance, load_metrics, load_or_train_model, recommend_for_base, strategy_snapshot
 
 
-app = Flask(__name__)
-logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
-
-
 def load_local_env() -> None:
     env_path = Path(".env")
     if not env_path.exists():
@@ -43,6 +39,12 @@ def load_local_env() -> None:
             continue
         key, value = line.split("=", 1)
         os.environ.setdefault(key.strip(), value.strip())
+
+
+load_local_env()
+
+app = Flask(__name__)
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
 
 def configure_secret_key() -> str:
@@ -57,10 +59,8 @@ def configure_secret_key() -> str:
     )
     return "attack-strategy-local-secret"
 
-
-load_local_env()
 app.secret_key = configure_secret_key()
-MODEL = load_or_train_model()
+MODEL = None
 
 
 SPECIAL_DISPLAY_NAMES = {
@@ -248,7 +248,15 @@ def build_default_form() -> dict[str, int | str]:
 
 DEFAULT_FORM = build_default_form()
 SESSION_KEY = "planner_form"
-API_REQUIRED_FIELDS = {"base_level", "clan_castle", "siege_machine"}
+API_REQUIRED_FIELDS = (
+    {"base_level", "clan_castle", "siege_machine"}
+    | {f"troop_{name}" for name in TROOP_TYPES}
+    | {f"spell_{name}" for name in SPELL_TYPES}
+    | {f"hero_{name}" for name in HERO_TYPES}
+    | {f"pet_{name}" for name in PET_TYPES}
+    | {f"guardian_{name}" for name in GUARDIAN_TYPES}
+    | {f"defense_{name}" for name in DEFENSE_TYPES}
+)
 NUMERIC_LIMITS: dict[str, tuple[int, int]] = {"base_level": (1, 20)}
 NUMERIC_LIMITS.update({f"troop_{name}": (0, TROOP_MAX_COUNTS[name]) for name in TROOP_TYPES})
 NUMERIC_LIMITS.update({f"spell_{name}": (0, SPELL_MAX_COUNTS[name]) for name in SPELL_TYPES})
@@ -265,13 +273,23 @@ def parse_int(form: Dict[str, str], key: str, fallback: int) -> int:
         return fallback
 
 
+def get_model():
+    global MODEL
+    if MODEL is None:
+        app.logger.info("Loading prediction model.")
+        MODEL = load_or_train_model()
+    return MODEL
+
+
 def validate_api_payload(body: Dict[str, Any]) -> tuple[dict[str, str], list[str]]:
     errors: list[str] = []
     cleaned: dict[str, str] = {}
 
-    for field in API_REQUIRED_FIELDS:
-        if field not in body:
-            errors.append(f"Missing required field: {field}")
+    missing_fields = sorted(field for field in API_REQUIRED_FIELDS if field not in body)
+    if missing_fields:
+        errors.append(
+            "Missing required fields: " + ", ".join(missing_fields)
+        )
 
     allowed_fields = set(NUMERIC_LIMITS) | {"clan_castle", "siege_machine"}
     unknown_fields = sorted(set(body) - allowed_fields)
@@ -458,9 +476,10 @@ def build_feature_importance_chart(limit: int = 8) -> dict[str, Any]:
 def run_analysis(form: Dict[str, str]) -> dict[str, Any]:
     payload, base = extract_inputs(form)
     metrics = load_metrics()
-    prediction = predict_probability(MODEL, payload)
+    model = get_model()
+    prediction = predict_probability(model, payload)
 
-    ranked = recommend_for_base(base, model=MODEL).head(3)
+    ranked = recommend_for_base(base, model=model).head(3)
     top_recommendations = [format_plan(row) for _, row in ranked.iterrows()]
     recommendation = top_recommendations[0] if top_recommendations else None
 

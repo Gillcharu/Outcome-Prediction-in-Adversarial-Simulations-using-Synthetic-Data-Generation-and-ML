@@ -291,6 +291,8 @@ Endpoints:
 - `GET /health`
 - `POST /api/predict`
 
+The API expects a complete army-and-base payload using the same field names as the web form. Invalid or incomplete payloads return `400`.
+
 Example:
 
 ```bash
