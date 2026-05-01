@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <main class="single-column-layout">
+    <section class="panel form-panel">
+      <div class="panel-heading">
+        <h2>Defence Setup</h2>
+        <p>Choose the defending base details in a dedicated step so the structure list is easier to scan.</p>
+      </div>
+
+      <form method="post" class="config-form">
+        <section class="group group-surface">
+          <div class="section-label">
+            <h3>Base Presets</h3>
+            <p>Start from a quick preset, then adjust individual structures if needed.</p>
+          </div>
+          <div class="preset-grid">
+            {% for preset_id, preset in base_presets.items() %}
+              <button type="button" class="preset-card" data-preset='{{ preset["values"] | tojson }}'>
+                <strong>{{ preset["label"] }}</strong>
+                <span>{{ preset["description"] }}</span>
+              </button>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section class="group group-surface">
+          <div class="section-label">
+            <h3>DEFENCES</h3>
+            <p>Set structure levels for the target base.</p>
+          </div>
+          <div class="compact-grid compact-grid-large">
+            <label class="input-card">
+              <span>Base Level</span>
+              <input type="number" min="1" max="17" name="base_level" value="{{ form_values['base_level'] }}">
+            </label>
+            {% for defense in defense_types %}
+              <label class="input-card">
+                <span>{{ display_names[defense] }}</span>
+                <input type="number" min="0" max="10" name="defense_{{ defense }}" value="{{ form_values['defense_' ~ defense] }}">
+              </label>
+            {% endfor %}
+          </div>
+        </section>
+
+        <div class="action-row between-row">
+          <a class="secondary-button" href="{{ url_for('attack') }}">Back to Attack</a>
+          <button class="primary-button" type="submit">See Results</button>
+        </div>
+      </form>
+    </section>
+  </main>
+{% endblock %}

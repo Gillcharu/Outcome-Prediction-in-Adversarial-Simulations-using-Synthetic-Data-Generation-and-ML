@@ -48,6 +48,10 @@ body {
   margin-bottom: 24px;
 }
 
+.hero-compact {
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+}
+
 .hero-copy,
 .hero-metrics,
 .panel {
@@ -132,6 +136,27 @@ body {
   gap: 14px;
 }
 
+.planner-steps {
+  align-content: start;
+}
+
+.step-card,
+.step-card:visited {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+}
+
+.step-card.is-active {
+  background: linear-gradient(180deg, rgba(20, 94, 92, 0.1), rgba(255, 248, 238, 0.96));
+  border-color: rgba(20, 94, 92, 0.25);
+}
+
 .metric-card,
 .probability-card,
 .recommendation-card,
@@ -166,6 +191,10 @@ body {
   grid-template-columns: minmax(0, 1.2fr) minmax(350px, 0.8fr);
   gap: 24px;
   align-items: start;
+}
+
+.single-column-layout {
+  display: grid;
 }
 
 .panel {
@@ -266,12 +295,17 @@ body {
 .subsection {
   display: grid;
   gap: 12px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.48);
+  border: 1px solid rgba(23, 32, 31, 0.06);
 }
 
 .split-inputs,
 .dual-grid,
 .summary-grid,
-.mini-columns {
+.mini-columns,
+.unit-columns {
   display: grid;
   gap: 14px;
 }
@@ -284,16 +318,16 @@ body {
 
 .compact-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 
 .compact-grid-large {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
 }
 
 .compact-grid-base {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 label,
@@ -308,6 +342,7 @@ label,
   border-radius: 20px;
   background: var(--surface-soft);
   border: 1px solid rgba(23, 32, 31, 0.06);
+  align-content: start;
 }
 
 .input-card span,
@@ -347,6 +382,14 @@ select:focus {
   gap: 16px;
 }
 
+.between-row {
+  justify-content: space-between;
+}
+
+.top-gap {
+  margin-top: 10px;
+}
+
 .action-note {
   margin: 0;
   max-width: 46ch;
@@ -369,9 +412,42 @@ select:focus {
   box-shadow: 0 16px 32px rgba(134, 54, 28, 0.22);
 }
 
+.secondary-button,
+.secondary-button:visited {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(23, 32, 31, 0.14);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 700;
+}
+
 .results-panel {
   position: sticky;
   top: 18px;
+}
+
+.results-page {
+  display: grid;
+  gap: 22px;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.results-main,
+.results-side {
+  display: grid;
+  gap: 18px;
 }
 
 .probability-card,
@@ -493,6 +569,7 @@ select:focus {
 @media (max-width: 1100px) {
   .hero,
   .layout,
+  .results-grid,
   .quick-intro,
   .split-inputs,
   .summary-grid,

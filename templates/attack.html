@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <main class="single-column-layout">
+    <section class="panel form-panel">
+      <div class="panel-heading">
+        <h2>Attack Setup</h2>
+        <p>Choose the full attacking configuration before moving to the defending base.</p>
+      </div>
+
+      <form method="post" class="config-form">
+        <section class="group group-surface">
+          <div class="section-label">
+            <h3>Army Builder</h3>
+            <p>Configure troops, spells, heroes, pets, guardians, clan castle, and siege machine.</p>
+          </div>
+
+          <div class="subsection">
+            <div class="subsection-head">
+              <h4>TROOPS</h4>
+              <p>Core army composition</p>
+            </div>
+            <div class="compact-grid compact-grid-large">
+              {% for troop in troop_types %}
+                <label class="input-card">
+                  <span>{{ display_names[troop] }}</span>
+                  <input type="number" min="0" name="troop_{{ troop }}" value="{{ form_values['troop_' ~ troop] }}">
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="subsection">
+            <div class="subsection-head">
+              <h4>SPELLS</h4>
+              <p>Support and control</p>
+            </div>
+            <div class="compact-grid compact-grid-large">
+              {% for spell in spell_types %}
+                <label class="input-card">
+                  <span>{{ display_names[spell] }}</span>
+                  <input type="number" min="0" name="spell_{{ spell }}" value="{{ form_values['spell_' ~ spell] }}">
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="split-inputs">
+            <div class="subsection">
+              <div class="subsection-head">
+                <h4>HEROES</h4>
+                <p>Hero levels and power</p>
+              </div>
+              <div class="compact-grid">
+                {% for hero in hero_types %}
+                  <label class="input-card">
+                    <span>{{ display_names[hero] }}</span>
+                    <input type="number" min="0" name="hero_{{ hero }}" value="{{ form_values['hero_' ~ hero] }}">
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="subsection">
+              <div class="subsection-head">
+                <h4>PETS</h4>
+                <p>Pet support levels</p>
+              </div>
+              <div class="compact-grid">
+                {% for pet in pet_types %}
+                  <label class="input-card">
+                    <span>{{ display_names[pet] }}</span>
+                    <input type="number" min="0" name="pet_{{ pet }}" value="{{ form_values['pet_' ~ pet] }}">
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div class="split-inputs">
+            <div class="subsection">
+              <div class="subsection-head">
+                <h4>GUARDIANS</h4>
+                <p>Extra support modifiers</p>
+              </div>
+              <div class="compact-grid">
+                {% for guardian in guardian_types %}
+                  <label class="input-card">
+                    <span>{{ display_names[guardian] }}</span>
+                    <input type="number" min="0" name="guardian_{{ guardian }}" value="{{ form_values['guardian_' ~ guardian] }}">
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="subsection">
+              <div class="subsection-head">
+                <h4>LOADOUT</h4>
+                <p>Final attack support choices</p>
+              </div>
+              <div class="dual-grid">
+                <label class="select-card">
+                  <span>Clan Castle Donation</span>
+                  <select name="clan_castle">
+                    {% for option in clan_castle_types %}
+                      <option value="{{ option }}" {% if form_values['clan_castle'] == option %}selected{% endif %}>{{ display_names[option] }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label class="select-card">
+                  <span>SIEGE MACHINE</span>
+                  <select name="siege_machine">
+                    {% for option in siege_types %}
+                      <option value="{{ option }}" {% if form_values['siege_machine'] == option %}selected{% endif %}>{{ display_names[option] }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="action-row">
+          <button class="primary-button" type="submit">Continue to Defence</button>
+        </div>
+      </form>
+    </section>
+  </main>
+{% endblock %}

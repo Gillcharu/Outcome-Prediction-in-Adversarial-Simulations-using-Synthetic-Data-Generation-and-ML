@@ -13,9 +13,10 @@ class AppRoutesTestCase(unittest.TestCase):
         self.assertEqual(response.get_json()["status"], "ok")
 
     def test_home_page_loads(self):
-        response = self.client.get("/")
+        response = self.client.get("/", follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Predict the best attack before the battle starts.", response.data)
+        self.assertIn(b"Build the attack in steps.", response.data)
+        self.assertIn(b"Attack Setup", response.data)
 
     def test_api_predict_returns_analysis(self):
         payload = {

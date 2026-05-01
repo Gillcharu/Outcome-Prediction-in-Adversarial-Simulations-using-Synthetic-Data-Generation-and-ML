@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Dict
 
 import pandas as pd
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 from battle_simulator import (
     BaseConfig,
@@ -22,6 +23,7 @@ from recommend_strategy import load_or_train_model, recommend_for_base
 
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "attack-strategy-local-secret")
 
 
 SPECIAL_DISPLAY_NAMES = {
@@ -206,6 +208,7 @@ def build_default_form() -> dict[str, int | str]:
 
 
 DEFAULT_FORM = build_default_form()
+SESSION_KEY = "planner_form"
 
 
 def parse_int(form: Dict[str, str], key: str, fallback: int) -> int:
@@ -362,52 +365,112 @@ def run_analysis(form: Dict[str, str]) -> dict[str, Any]:
     }
 
 
-@app.route("/", methods=["GET", "POST"])
-def index():
+def get_form_values() -> dict[str, int | str]:
     form_values = DEFAULT_FORM.copy()
-    prediction = None
-    recommendation = None
-    top_recommendations = []
-    chart_data = None
-    insights: list[str] = []
-    army_summary = None
-    defense_summary = None
+    stored = session.get(SESSION_KEY, {})
+    for key, value in stored.items():
+        if key in form_values:
+            form_values[key] = value
+    return form_values
 
+
+def update_form_values(source: Dict[str, str], keys: list[str]) -> dict[str, int | str]:
+    form_values = get_form_values()
+    for key in keys:
+        if key in source:
+            form_values[key] = source.get(key, form_values[key])
+    session[SESSION_KEY] = form_values
+    return form_values
+
+
+def common_context() -> dict[str, Any]:
+    return {
+        "troop_types": TROOP_TYPES,
+        "spell_types": SPELL_TYPES,
+        "hero_types": HERO_TYPES,
+        "pet_types": PET_TYPES,
+        "guardian_types": GUARDIAN_TYPES,
+        "defense_types": DEFENSE_TYPES,
+        "clan_castle_types": CLAN_CASTLE_TYPES,
+        "siege_types": SIEGE_TYPES,
+        "display_names": DISPLAY_NAMES,
+        "base_presets": BASE_PRESETS,
+    }
+
+
+def attack_keys() -> list[str]:
+    return (
+        [f"troop_{item}" for item in TROOP_TYPES]
+        + [f"spell_{item}" for item in SPELL_TYPES]
+        + [f"hero_{item}" for item in HERO_TYPES]
+        + [f"pet_{item}" for item in PET_TYPES]
+        + [f"guardian_{item}" for item in GUARDIAN_TYPES]
+        + ["clan_castle", "siege_machine"]
+    )
+
+
+def defence_keys() -> list[str]:
+    return ["base_level"] + [f"defense_{item}" for item in DEFENSE_TYPES]
+
+
+@app.route("/")
+def index():
+    return redirect(url_for("attack"))
+
+
+@app.route("/attack", methods=["GET", "POST"])
+def attack():
+    form_values = get_form_values()
     if request.method == "POST":
-        for key in DEFAULT_FORM:
-            if key in request.form:
-                form_values[key] = request.form.get(key, DEFAULT_FORM[key])
-
-        analysis = run_analysis(request.form)
-        prediction = analysis["prediction"]
-        recommendation = analysis["recommendation"]
-        top_recommendations = analysis["top_recommendations"]
-        chart_data = analysis["chart_data"]
-        insights = analysis["insights"]
-        army_summary = analysis["army_summary"]
-        defense_summary = analysis["defense_summary"]
+        form_values = update_form_values(request.form, attack_keys())
+        return redirect(url_for("defence"))
 
     return render_template(
-        "index.html",
+        "attack.html",
         form_values=form_values,
-        prediction=prediction,
-        recommendation=recommendation,
-        top_recommendations=top_recommendations,
-        chart_data=chart_data,
-        insights=insights,
-        army_summary=army_summary,
-        defense_summary=defense_summary,
-        troop_types=TROOP_TYPES,
-        spell_types=SPELL_TYPES,
-        hero_types=HERO_TYPES,
-        pet_types=PET_TYPES,
-        guardian_types=GUARDIAN_TYPES,
-        defense_types=DEFENSE_TYPES,
-        clan_castle_types=CLAN_CASTLE_TYPES,
-        siege_types=SIEGE_TYPES,
-        display_names=DISPLAY_NAMES,
-        base_presets=BASE_PRESETS,
+        step="attack",
+        **common_context(),
     )
+
+
+@app.route("/defence", methods=["GET", "POST"])
+def defence():
+    form_values = get_form_values()
+    if request.method == "POST":
+        form_values = update_form_values(request.form, defence_keys())
+        return redirect(url_for("results"))
+
+    return render_template(
+        "defence.html",
+        form_values=form_values,
+        step="defence",
+        **common_context(),
+    )
+
+
+@app.route("/results", methods=["GET"])
+def results():
+    form_values = get_form_values()
+    analysis = run_analysis({key: str(value) for key, value in form_values.items()})
+    return render_template(
+        "results.html",
+        form_values=form_values,
+        prediction=analysis["prediction"],
+        recommendation=analysis["recommendation"],
+        top_recommendations=analysis["top_recommendations"],
+        chart_data=analysis["chart_data"],
+        insights=analysis["insights"],
+        army_summary=analysis["army_summary"],
+        defense_summary=analysis["defense_summary"],
+        step="results",
+        **common_context(),
+    )
+
+
+@app.route("/reset", methods=["POST"])
+def reset():
+    session.pop(SESSION_KEY, None)
+    return redirect(url_for("attack"))
 
 
 @app.route("/api/predict", methods=["POST"])

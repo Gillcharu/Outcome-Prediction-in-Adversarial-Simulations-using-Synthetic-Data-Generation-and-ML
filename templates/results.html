@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <main class="single-column-layout">
+    <section class="panel results-page">
+      <div class="panel-heading">
+        <h2>Results</h2>
+        <p>Review the prediction, compare alternatives, and refine the setup if needed.</p>
+      </div>
+
+      <div class="results-grid">
+        <div class="results-main">
+          <div class="summary-grid">
+            <div class="probability-card">
+              <span class="metric-label">Your selected army</span>
+              <strong>{{ "%.1f"|format(prediction * 100) }}%</strong>
+              <p>Predicted probability of winning this attack.</p>
+            </div>
+            {% if recommendation %}
+              <div class="probability-card accent-card">
+                <span class="metric-label">Best recommendation</span>
+                <strong>{{ "%.1f"|format(recommendation.probability * 100) }}%</strong>
+                <p>Highest estimated chance against the same base.</p>
+              </div>
+            {% endif %}
+          </div>
+
+          {% if chart_data %}
+            <div class="chart-card" data-chart='{{ chart_data | tojson }}'>
+              <div class="panel-heading compact">
+                <h3>Strategy Comparison</h3>
+                <p>Visual comparison between your army and the top recommendations.</p>
+              </div>
+              <div id="comparison-chart" class="bar-chart" aria-label="Strategy comparison chart"></div>
+            </div>
+          {% endif %}
+
+          {% if recommendation %}
+            <div class="recommendation-card">
+              <div class="recommendation-header">
+                <div>
+                  <span class="metric-label">Best recommended strategy</span>
+                  <h3>{{ "%.1f"|format(recommendation.probability * 100) }}% expected win rate</h3>
+                </div>
+                <div class="tags">
+                  <span>{{ recommendation.clan_castle }}</span>
+                  <span>{{ recommendation.siege_machine }}</span>
+                </div>
+              </div>
+
+              <div class="unit-columns">
+                <div>
+                  <h4>TROOPS</h4>
+                  <ul>{% for item in recommendation.troops %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul>
+                </div>
+                <div>
+                  <h4>SPELLS</h4>
+                  <ul>{% for item in recommendation.spells %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul>
+                </div>
+                <div>
+                  <h4>HEROES</h4>
+                  <ul>{% for item in recommendation.heroes %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul>
+                </div>
+                <div>
+                  <h4>PETS</h4>
+                  <ul>{% for item in recommendation.pets %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul>
+                </div>
+                <div>
+                  <h4>GUARDIANS</h4>
+                  <ul>{% for item in recommendation.guardians %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if top_recommendations %}
+            <div class="top-list">
+              <h3>Top candidate strategies</h3>
+              {% for item in top_recommendations %}
+                <article class="top-item">
+                  <strong>{{ "%.1f"|format(item.probability * 100) }}%</strong>
+                  <p>{{ item.clan_castle }} with {{ item.siege_machine }}</p>
+                </article>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <aside class="results-side">
+          {% if insights %}
+            <div class="insights-card">
+              <h3>Key Insights</h3>
+              <ul class="insights-list">{% for insight in insights %}<li>{{ insight }}</li>{% endfor %}</ul>
+            </div>
+          {% endif %}
+
+          {% if army_summary %}
+            <div class="summary-card">
+              <h3>Your Selected Setup</h3>
+              <div class="mini-columns">
+                <div><h4>TROOPS</h4><ul>{% for item in army_summary.troops %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul></div>
+                <div><h4>SPELLS</h4><ul>{% for item in army_summary.spells %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul></div>
+                <div><h4>HEROES</h4><ul>{% for item in army_summary.heroes %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul></div>
+                <div><h4>PETS</h4><ul>{% for item in army_summary.pets %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul></div>
+                <div><h4>GUARDIANS</h4><ul>{% for item in army_summary.guardians %}<li>{{ item.name }}: {{ item.value }}</li>{% endfor %}</ul></div>
+              </div>
+              <div class="tags">
+                <span>{{ army_summary.clan_castle }}</span>
+                <span>{{ army_summary.siege_machine }}</span>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if defense_summary %}
+            <div class="summary-card">
+              <h3>Selected Defence Profile</h3>
+              <div class="compact-grid compact-grid-large">
+                {% for item in defense_summary %}
+                  <div class="input-card">
+                    <span>{{ item.name }}</span>
+                    <strong>{{ item.value }}</strong>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </aside>
+      </div>
+
+      <div class="action-row between-row top-gap">
+        <a class="secondary-button" href="{{ url_for('defence') }}">Back to Defence</a>
+        <form method="post" action="{{ url_for('reset') }}">
+          <button class="secondary-button" type="submit">Start Over</button>
+        </form>
+      </div>
+    </section>
+  </main>
+{% endblock %}

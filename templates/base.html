@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Attack Strategy Predictor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero hero-compact">
+        <div class="hero-copy">
+          <p class="eyebrow">Machine Learning Project</p>
+          <h1>Build the attack in steps.</h1>
+          <p class="hero-text">
+            Split the workflow into attack setup, defence setup, and results so the interface stays clean.
+          </p>
+        </div>
+        <div class="hero-metrics planner-steps">
+          <a class="step-card {% if step == 'attack' %}is-active{% endif %}" href="{{ url_for('attack') }}">
+            <span class="metric-label">Step 1</span>
+            <strong>Attack Setup</strong>
+          </a>
+          <a class="step-card {% if step == 'defence' %}is-active{% endif %}" href="{{ url_for('defence') }}">
+            <span class="metric-label">Step 2</span>
+            <strong>Defence Setup</strong>
+          </a>
+          <a class="step-card {% if step == 'results' %}is-active{% endif %}" href="{{ url_for('results') }}">
+            <span class="metric-label">Step 3</span>
+            <strong>Results</strong>
+          </a>
+        </div>
+      </header>
+
+      {% block content %}{% endblock %}
+    </div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
