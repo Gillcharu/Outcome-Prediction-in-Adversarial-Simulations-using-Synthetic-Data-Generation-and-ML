@@ -71,6 +71,7 @@ Candidate Strategy Recommendation
 - Candidate search for top attacking strategies
 - Recommendation explanations that describe why a strategy fits the selected base
 - Exported evaluation artifacts including metrics and feature importance
+- Feature-importance visualization in the results page
 
 ## Inputs modeled
 
@@ -253,9 +254,9 @@ The project uses a `RandomForestRegressor` to estimate battle success probabilit
 
 Current held-out test results:
 
-- `MAE = 0.0933`
-- `RMSE = 0.1455`
-- `R² = 0.6028`
+- `MAE = 0.2007`
+- `RMSE = 0.2418`
+- `R² = 0.6071`
 
 Generated artifacts after training:
 
@@ -275,7 +276,7 @@ The web app allows you to:
 - estimate the probability of success for a chosen attack
 - compare your current army with stronger recommended strategies
 - inspect structured summaries of selected attack and defense inputs
-- view model metrics and recommendation reasons directly in the results page
+- view model metrics, feature importance, and recommendation reasons directly in the results page
 
 Local URL:
 
@@ -371,8 +372,8 @@ docker run -p 5000:5000 attack-predictor
 ## Future improvements
 
 - stronger simulation rules with more game-specific mechanics
-- larger candidate search space for recommendations
-- interactive feature importance and model explainability views
+- smarter search strategies such as beam search or evolutionary search
+- deeper explanation panels beyond global feature importance
 - grouped defense filters in the UI
 - deployed public demo
 

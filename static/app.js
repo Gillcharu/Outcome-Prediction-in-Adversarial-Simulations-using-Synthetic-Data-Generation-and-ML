@@ -20,10 +20,14 @@ function setupPresets() {
   });
 }
 
-function renderComparisonChart() {
-  const chartCard = document.querySelector(".chart-card");
-  const chartRoot = document.getElementById("comparison-chart");
-  if (!chartCard || !chartRoot) {
+function renderBarChart(rootId) {
+  const chartRoot = document.getElementById(rootId);
+  if (!chartRoot) {
+    return;
+  }
+
+  const chartCard = chartRoot.closest(".chart-card");
+  if (!chartCard) {
     return;
   }
 
@@ -47,7 +51,9 @@ function renderComparisonChart() {
     name.textContent = label;
 
     const score = document.createElement("strong");
-    score.textContent = `${value.toFixed(1)}%`;
+    score.textContent = data.kind === "feature-importance"
+      ? `${value.toFixed(2)}`
+      : `${value.toFixed(1)}%`;
 
     meta.appendChild(name);
     meta.appendChild(score);
@@ -67,4 +73,5 @@ function renderComparisonChart() {
 }
 
 setupPresets();
-renderComparisonChart();
+renderBarChart("comparison-chart");
+renderBarChart("feature-importance-chart");

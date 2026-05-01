@@ -1,8 +1,10 @@
 import unittest
 
+import random
+
 from battle_simulator import DEFENSE_TYPES, candidate_attacks, generate_dataset
-from battle_simulator import BaseConfig
-from recommend_strategy import load_metrics, recommend_for_base
+from battle_simulator import AttackConfig, BaseConfig, battle_score
+from recommend_strategy import load_feature_importance, load_metrics, recommend_for_base
 
 
 class MLPipelineTestCase(unittest.TestCase):
@@ -40,6 +42,88 @@ class MLPipelineTestCase(unittest.TestCase):
         self.assertIn("mae", metrics)
         self.assertIn("rmse", metrics)
         self.assertIn("r2", metrics)
+
+    def test_feature_importance_is_available(self):
+        features = load_feature_importance(limit=5)
+        self.assertEqual(len(features), 5)
+        self.assertIn("feature", features[0])
+        self.assertIn("importance", features[0])
+
+    def test_battle_score_reflects_air_matchup_pressure(self):
+        air_attack = AttackConfig(
+            troops={
+                "barbarian": 0,
+                "archer": 0,
+                "wizard": 0,
+                "goblin": 0,
+                "giant": 0,
+                "wall_breaker": 0,
+                "balloon": 12,
+                "healer": 0,
+                "dragon": 8,
+                "pekka": 0,
+                "baby_dragon": 4,
+                "miner": 0,
+                "electro_dragon": 6,
+                "yeti": 0,
+                "dragon_rider": 4,
+                "electro_titan": 0,
+                "root_rider": 0,
+                "thrower": 0,
+                "meteor_golem": 0,
+                "minion": 8,
+                "hog_rider": 0,
+                "valkyrie": 0,
+                "golem": 0,
+                "witch": 0,
+                "lava_hound": 2,
+                "bowler": 0,
+                "ice_golem": 0,
+                "apprentice_warden": 0,
+                "headhunter": 0,
+                "druid": 0,
+                "furnace": 0,
+            },
+            spells={name: 0 for name in [
+                "lightning", "heal", "rage", "jump", "freeze", "clone", "invisibility",
+                "recall", "revive", "totem", "poison", "earthquake", "haste", "skeleton",
+                "bat", "overgrowth", "ice_block"
+            ]},
+            heroes={
+                "barbarian_king": 85,
+                "archer_queen": 85,
+                "minion_prince": 60,
+                "grand_warden": 65,
+                "royal_champion": 35,
+                "dragon_duke": 32,
+            },
+            pets={"lassi": 4, "electro_owl": 9, "mighty_yak": 2, "unicorn": 7},
+            guardians={"ground_guardian": 2, "air_guardian": 8, "healing_guardian": 6},
+            clan_castle="cc_balloon",
+            siege_machine="stone_slammer",
+        )
+        low_aa_base = BaseConfig(
+            base_level=15,
+            anti_air_defense=25.0,
+            splash_defense=35.0,
+            wall_strength=22.0,
+            inferno_strength=24.0,
+            trap_pressure=18.0,
+            defenses={name: 3 for name in DEFENSE_TYPES},
+        )
+        high_aa_base = BaseConfig(
+            base_level=15,
+            anti_air_defense=80.0,
+            splash_defense=35.0,
+            wall_strength=22.0,
+            inferno_strength=24.0,
+            trap_pressure=18.0,
+            defenses={name: 8 for name in DEFENSE_TYPES},
+        )
+        rng = random.Random(7)
+        low_score = battle_score(air_attack, low_aa_base, rng)
+        high_score = battle_score(air_attack, high_aa_base, random.Random(7))
+        self.assertGreater(low_score, high_score)
 
 
 if __name__ == "__main__":

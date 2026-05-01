@@ -19,8 +19,7 @@ from battle_simulator import (
     aggregate_base_metrics,
     flatten_base_config,
 )
-from recommend_strategy import load_or_train_model, recommend_for_base
-from recommend_strategy import load_metrics, strategy_snapshot
+from recommend_strategy import load_feature_importance, load_metrics, load_or_train_model, recommend_for_base, strategy_snapshot
 
 
 app = Flask(__name__)
@@ -351,6 +350,27 @@ def build_insights(prediction: float, recommendation: dict[str, Any] | None) -> 
     ]
 
 
+def format_feature_label(feature: str) -> str:
+    if feature.startswith("clan_castle_"):
+        return f"Clan Castle: {pretty_name(feature.replace('clan_castle_', '', 1))}"
+    if feature.startswith("siege_machine_"):
+        return f"Siege Machine: {pretty_name(feature.replace('siege_machine_', '', 1))}"
+    prefixes = ("troop_", "spell_", "hero_", "pet_", "guardian_", "defense_")
+    for prefix in prefixes:
+        if feature.startswith(prefix):
+            return pretty_name(feature.replace(prefix, "", 1))
+    return pretty_name(feature)
+
+
+def build_feature_importance_chart(limit: int = 8) -> dict[str, Any]:
+    items = load_feature_importance(limit=limit)
+    return {
+        "labels": [format_feature_label(str(item["feature"])) for item in items],
+        "values": [round(float(item["importance"]) * 100, 2) for item in items],
+        "kind": "feature-importance",
+    }
+
+
 def run_analysis(form: Dict[str, str]) -> dict[str, Any]:
     payload, base = extract_inputs(form)
     metrics = load_metrics()
@@ -370,6 +390,7 @@ def run_analysis(form: Dict[str, str]) -> dict[str, Any]:
         "defense_summary": summarize_defenses(base),
         "base_summary": flatten_base_config(base),
         "metrics": metrics,
+        "feature_importance_chart": build_feature_importance_chart(),
     }
 
 
@@ -471,6 +492,7 @@ def results():
         army_summary=analysis["army_summary"],
         defense_summary=analysis["defense_summary"],
         metrics=analysis["metrics"],
+        feature_importance_chart=analysis["feature_importance_chart"],
         step="results",
         **common_context(),
     )

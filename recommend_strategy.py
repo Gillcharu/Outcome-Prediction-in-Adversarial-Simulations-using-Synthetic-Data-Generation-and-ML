@@ -7,6 +7,7 @@ import joblib
 import pandas as pd
 
 from battle_simulator import (
+    AttackConfig,
     BaseConfig,
     DEFENSE_TYPES,
     GUARDIAN_TYPES,
@@ -17,8 +18,10 @@ from battle_simulator import (
     candidate_attacks,
     flatten_attack_config,
     flatten_base_config,
+    mutate_attack_config,
 )
 from train_model import METRICS_PATH, MODEL_PATH, train_and_save_model
+from train_model import FEATURE_IMPORTANCE_PATH
 
 
 def load_or_train_model():
@@ -47,20 +50,80 @@ def load_or_train_model():
         return model
 
 
-def recommend_for_base(base: BaseConfig, model=None) -> pd.DataFrame:
-    model = model or load_or_train_model()
-    candidates = candidate_attacks()
+def load_feature_importance(limit: int = 10) -> list[dict[str, float | str]]:
+    if not FEATURE_IMPORTANCE_PATH.exists():
+        _, _, _ = train_and_save_model()
+    frame = pd.read_csv(FEATURE_IMPORTANCE_PATH).head(limit).copy()
+    frame["feature"] = frame["feature"].str.replace("categorical__", "", regex=False).str.replace("numeric__", "", regex=False)
+    return [
+        {"feature": str(row["feature"]), "importance": float(row["importance"])}
+        for _, row in frame.iterrows()
+    ]
 
+
+def _evaluate_candidates(candidates: list[AttackConfig], base: BaseConfig, model) -> pd.DataFrame:
     rows = []
     for attack in candidates:
         row = {}
         row.update(flatten_attack_config(attack))
         row.update(flatten_base_config(base))
         rows.append(row)
-
     candidate_df = pd.DataFrame(rows)
     candidate_df["predicted_win_probability"] = model.predict(candidate_df)
-    ranked = candidate_df.sort_values("predicted_win_probability", ascending=False)
+    return candidate_df
+
+
+def _expand_candidates(seed_rows: pd.DataFrame) -> list[AttackConfig]:
+    expanded: list[AttackConfig] = []
+    clan_options = ["cc_yeti", "cc_balloon", "cc_dragon", "cc_ice_golem"]
+    siege_options = [
+        "wall_wrecker",
+        "battle_blimp",
+        "stone_slammer",
+        "siege_barracks",
+        "log_launcher",
+        "flame_flinger",
+        "battle_drill",
+    ]
+
+    for row_index, (_, row) in enumerate(seed_rows.iterrows()):
+        attack = AttackConfig(
+            troops={name: int(row[f"troop_{name}"]) for name in TROOP_TYPES},
+            spells={name: int(row[f"spell_{name}"]) for name in SPELL_TYPES},
+            heroes={name: int(row[f"hero_{name}"]) for name in HERO_TYPES},
+            pets={name: int(row[f"pet_{name}"]) for name in PET_TYPES},
+            guardians={name: int(row[f"guardian_{name}"]) for name in GUARDIAN_TYPES},
+            clan_castle=str(row["clan_castle"]),
+            siege_machine=str(row["siege_machine"]),
+        )
+        expanded.append(attack)
+        for variant_index in range(4):
+            variant = mutate_attack_config(attack, row_index * 4 + variant_index)
+            expanded.append(variant)
+            expanded.append(
+                AttackConfig(
+                    troops=variant.troops,
+                    spells=variant.spells,
+                    heroes=variant.heroes,
+                    pets=variant.pets,
+                    guardians=variant.guardians,
+                    clan_castle=clan_options[(row_index + variant_index) % len(clan_options)],
+                    siege_machine=siege_options[(row_index + variant_index) % len(siege_options)],
+                )
+            )
+    return expanded
+
+
+def recommend_for_base(base: BaseConfig, model=None) -> pd.DataFrame:
+    model = model or load_or_train_model()
+
+    baseline_df = _evaluate_candidates(candidate_attacks(), base, model)
+    seed_rows = baseline_df.sort_values("predicted_win_probability", ascending=False).head(12)
+    refined_df = _evaluate_candidates(_expand_candidates(seed_rows), base, model)
+
+    ranked = pd.concat([baseline_df, refined_df], ignore_index=True)
+    ranked = ranked.drop_duplicates(subset=[column for column in ranked.columns if column != "predicted_win_probability"])
+    ranked = ranked.sort_values("predicted_win_probability", ascending=False)
     return ranked
 
 

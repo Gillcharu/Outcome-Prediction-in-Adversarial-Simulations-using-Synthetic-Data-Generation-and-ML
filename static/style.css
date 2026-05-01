@@ -468,6 +468,10 @@ select:focus {
   background: linear-gradient(180deg, rgba(20, 94, 92, 0.08), rgba(255, 248, 238, 0.96));
 }
 
+.chart-card-soft {
+  background: linear-gradient(180deg, rgba(182, 83, 47, 0.05), rgba(255, 251, 245, 0.96));
+}
+
 .recommendation-card,
 .chart-card,
 .insights-card,
@@ -540,6 +544,12 @@ select:focus {
 .bar-chart {
   display: grid;
   gap: 14px;
+}
+
+.feature-chart .bar-row:first-child .bar-fill,
+.feature-chart .bar-row:nth-child(2) .bar-fill,
+.feature-chart .bar-row:nth-child(3) .bar-fill {
+  background: linear-gradient(90deg, var(--primary), #d58956);
 }
 
 .bar-row {

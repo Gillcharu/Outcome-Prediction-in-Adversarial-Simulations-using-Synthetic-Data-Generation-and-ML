@@ -35,6 +35,16 @@
             </div>
           {% endif %}
 
+          {% if feature_importance_chart %}
+            <div class="chart-card chart-card-soft" data-chart='{{ feature_importance_chart | tojson }}'>
+              <div class="panel-heading compact">
+                <h3>What The Model Relies On</h3>
+                <p>The strongest learned drivers from the latest trained Random Forest model.</p>
+              </div>
+              <div id="feature-importance-chart" class="bar-chart feature-chart" aria-label="Feature importance chart"></div>
+            </div>
+          {% endif %}
+
           {% if recommendation %}
             <div class="recommendation-card">
               <div class="recommendation-header">

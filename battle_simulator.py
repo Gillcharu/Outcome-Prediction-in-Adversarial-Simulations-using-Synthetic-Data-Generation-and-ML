@@ -409,8 +409,99 @@ def attack_style_scores(attack: AttackConfig) -> Tuple[float, float, float]:
     return air_power, ground_power, support_power
 
 
-def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> float:
+def attack_phase_profile(attack: AttackConfig) -> Dict[str, float]:
     air_power, ground_power, support_power = attack_style_scores(attack)
+
+    wall_breakers = attack.troops["wall_breaker"] * 1.25
+    jump_pressure = attack.spells["jump"] * 2.0 + attack.spells["earthquake"] * 1.5
+    siege_breach = {
+        "wall_wrecker": 5.0,
+        "log_launcher": 4.6,
+        "battle_drill": 4.8,
+        "siege_barracks": 2.4,
+        "battle_blimp": 1.8,
+        "stone_slammer": 1.6,
+        "flame_flinger": 1.2,
+    }.get(attack.siege_machine, 1.0)
+
+    air_troop_mass = sum(attack.troops[name] for name in TROOP_AIR_POWER)
+    ground_troop_mass = sum(attack.troops.get(name, 0) for name in TROOP_GROUND_POWER)
+    splash_vulnerable_mass = (
+        attack.troops["barbarian"]
+        + attack.troops["archer"]
+        + attack.troops["wizard"]
+        + attack.troops["balloon"]
+        + attack.troops["minion"]
+        + attack.troops["witch"] * 1.3
+        + attack.spells["bat"] * 3.0
+        + attack.spells["skeleton"] * 2.3
+    )
+
+    sustain = (
+        support_power
+        + attack.spells["heal"] * 2.1
+        + attack.spells["rage"] * 0.8
+        + attack.spells["freeze"] * 0.6
+        + attack.pets["unicorn"] * 0.85
+        + attack.guardians["healing_guardian"] * 0.95
+        + attack.troops["healer"] * 1.3
+        + attack.troops["druid"] * 1.0
+    )
+    burst = (
+        air_power * 0.3
+        + ground_power * 0.34
+        + attack.spells["rage"] * 1.8
+        + attack.spells["freeze"] * 1.4
+        + attack.spells["clone"] * 1.2
+        + attack.troops["headhunter"] * 0.7
+    )
+    hero_dive = (
+        attack.heroes["barbarian_king"] * 0.045
+        + attack.heroes["archer_queen"] * 0.05
+        + attack.heroes["royal_champion"] * 0.08
+        + attack.heroes["grand_warden"] * 0.04
+        + attack.heroes["dragon_duke"] * 0.05
+        + attack.heroes["minion_prince"] * 0.04
+    )
+    pathing = (
+        siege_breach
+        + wall_breakers
+        + jump_pressure
+        + attack.troops["root_rider"] * 0.65
+        + attack.troops["hog_rider"] * 0.22
+        + attack.troops["miner"] * 0.24
+    )
+    trap_resilience = (
+        sustain * 0.35
+        + attack.troops["ice_golem"] * 0.9
+        + attack.troops["golem"] * 0.8
+        + attack.troops["yeti"] * 0.45
+        + attack.spells["heal"] * 1.1
+        + attack.spells["freeze"] * 0.45
+    )
+    air_ratio = air_troop_mass / max(1.0, air_troop_mass + ground_troop_mass)
+    ground_ratio = ground_troop_mass / max(1.0, air_troop_mass + ground_troop_mass)
+
+    return {
+        "air_power": air_power,
+        "ground_power": ground_power,
+        "support_power": support_power,
+        "sustain": sustain,
+        "burst": burst,
+        "hero_dive": hero_dive,
+        "pathing": pathing,
+        "trap_resilience": trap_resilience,
+        "splash_vulnerable_mass": splash_vulnerable_mass,
+        "air_ratio": air_ratio,
+        "ground_ratio": ground_ratio,
+    }
+
+
+def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> float:
+    profile = attack_phase_profile(attack)
+    air_power = profile["air_power"]
+    ground_power = profile["ground_power"]
+    support_power = profile["support_power"]
 
     ground_pressure = sum(base.defenses.get(name, 0) * weight for name, weight in DEFENSE_GROUND_WEIGHTS.items())
     attack_total = air_power + ground_power + support_power
@@ -427,6 +518,33 @@ def battle_score(attack: AttackConfig, base: BaseConfig, rng: random.Random) -> 
     score = 46.0
     score += attack_total * 0.34
     score -= defense_total * 0.58
+
+    anti_air_gap = air_power - (base.anti_air_defense * 0.84)
+    wall_break_gap = profile["pathing"] - (base.wall_strength * 0.36)
+    sustain_gap = profile["sustain"] - (base.splash_defense * 0.4 + base.trap_pressure * 0.28)
+    core_gap = profile["burst"] + profile["hero_dive"] - (base.inferno_strength * 0.5 + base.base_level * 0.24)
+    trap_gap = profile["trap_resilience"] - base.trap_pressure * 0.42
+
+    score += anti_air_gap * (0.18 + profile["air_ratio"] * 0.08)
+    score += wall_break_gap * (0.22 + profile["ground_ratio"] * 0.04)
+    score += sustain_gap * 0.16
+    score += core_gap * 0.14
+    score += trap_gap * 0.12
+
+    if profile["air_ratio"] > 0.62 and base.defenses.get("air_sweeper", 0) >= 7:
+        score -= (base.defenses["air_sweeper"] - 6) * 1.1
+    if profile["ground_ratio"] > 0.58 and base.defenses.get("wall", 0) >= 7 and wall_break_gap < 0:
+        score -= (base.defenses["wall"] - 6) * 0.9
+    if profile["splash_vulnerable_mass"] > 24 and base.splash_defense >= 55:
+        score -= (profile["splash_vulnerable_mass"] - 24) * 0.16
+    if profile["hero_dive"] > 12 and attack.spells["invisibility"] > 0:
+        score += 1.8
+    if profile["air_ratio"] > 0.55 and attack.spells["freeze"] + attack.spells["haste"] >= 3:
+        score += 1.4
+    if profile["ground_ratio"] > 0.55 and attack.spells["jump"] + attack.spells["earthquake"] >= 2:
+        score += 1.3
+    if attack.troops["headhunter"] >= 2 and base.defenses.get("monolith", 0) >= 6:
+        score += 1.0
 
     if attack.siege_machine == "wall_wrecker":
         score += max(0.0, 18.0 - base.wall_strength) * 1.1
@@ -554,3 +672,43 @@ def candidate_attacks() -> List[AttackConfig]:
             )
         )
     return attacks
+
+
+def mutate_attack_config(attack: AttackConfig, variant_index: int) -> AttackConfig:
+    troops = dict(attack.troops)
+    spells = dict(attack.spells)
+    pets = dict(attack.pets)
+    guardians = dict(attack.guardians)
+
+    troop_patterns = [
+        [("wall_breaker", 2), ("freeze", 1), ("electro_dragon", -1), ("dragon_rider", 1)],
+        [("root_rider", 1), ("jump", 1), ("heal", -1), ("wizard", 2)],
+        [("hog_rider", 2), ("freeze", 1), ("miner", -2), ("headhunter", 1)],
+        [("balloon", 2), ("haste", 1), ("minion", 2), ("clone", 1)],
+        [("witch", 2), ("ice_golem", 1), ("poison", 1), ("rage", -1)],
+        [("yeti", 1), ("earthquake", 1), ("wall_breaker", 2), ("heal", -1)],
+    ]
+    pattern = troop_patterns[variant_index % len(troop_patterns)]
+    for name, delta in pattern:
+        if name in troops:
+            troops[name] = max(0, min(TROOP_MAX_COUNTS[name], troops[name] + delta))
+        elif name in spells:
+            spells[name] = max(0, min(SPELL_MAX_COUNTS[name], spells[name] + delta))
+
+    pet_cycle = ["electro_owl", "mighty_yak", "unicorn", "lassi"]
+    guardian_cycle = ["air_guardian", "ground_guardian", "healing_guardian"]
+    pets[pet_cycle[variant_index % len(pet_cycle)]] = min(10, pets[pet_cycle[variant_index % len(pet_cycle)]] + 1)
+    guardians[guardian_cycle[variant_index % len(guardian_cycle)]] = min(
+        10,
+        guardians[guardian_cycle[variant_index % len(guardian_cycle)]] + 1,
+    )
+
+    return AttackConfig(
+        troops=troops,
+        spells=spells,
+        heroes=dict(attack.heroes),
+        pets=pets,
+        guardians=guardians,
+        clan_castle=attack.clan_castle,
+        siege_machine=attack.siege_machine,
+    )
