@@ -7,6 +7,14 @@
 
 This project predicts the probability of success in a strategy-game attack using synthetic battle simulations and machine learning. Instead of relying on real battle logs, it generates a large synthetic dataset with rule-based combat logic, trains a regression model on those simulated outcomes, and recommends stronger attacking strategies for a selected defending base.
 
+## 30-second summary
+
+- `Problem`: predict attack success without access to real battle logs
+- `Approach`: simulate battles, train a Random Forest regressor, and recommend stronger strategies
+- `Stack`: Python, Flask, scikit-learn, pandas, NumPy
+- `Output`: win probability plus recommendation reasoning
+- `Interface`: multi-page web flow with attack setup, defence setup, and results
+
 ## Overview
 
 The project combines three connected ideas:
@@ -58,9 +66,11 @@ Brute-Force Strategy Recommendation
 - Probability prediction with `RandomForestRegressor`
 - Detailed attack-side feature support
 - Detailed defense-side feature support
-- Web interface for prediction and strategy comparison
+- Multi-page web interface for attack setup, defence setup, and results
 - JSON API for programmatic access
 - Candidate search for top attacking strategies
+- Recommendation explanations that describe why a strategy fits the selected base
+- Exported evaluation artifacts including metrics and feature importance
 
 ## Inputs modeled
 
@@ -181,16 +191,25 @@ Brute-Force Strategy Recommendation
   Synthetic data generation, schema definitions, and battle scoring logic.
 
 - `train_model.py`  
-  Dataset creation, model training, evaluation, and artifact generation.
+  Dataset creation, model training, evaluation, feature importance export, and artifact generation.
 
 - `recommend_strategy.py`  
-  Candidate search and ranking for recommended attacking strategies.
+  Candidate search, ranking, and recommendation reasoning.
 
 - `app.py`  
   Flask application for the website and API.
 
-- `templates/index.html`  
-  Frontend structure for the web interface.
+- `templates/base.html`  
+  Shared page shell and step navigation.
+
+- `templates/attack.html`  
+  Attack setup page.
+
+- `templates/defence.html`  
+  Defence setup page.
+
+- `templates/results.html`  
+  Results page for predictions, strategy comparison, and model insights.
 
 - `static/style.css`  
   UI styling.
@@ -200,6 +219,12 @@ Brute-Force Strategy Recommendation
 
 - `tests/test_app.py`  
   Basic application tests.
+
+- `artifacts/metrics.json`  
+  Stored evaluation results from the latest model training run.
+
+- `artifacts/feature_importance.csv`  
+  Ranked feature importance values from the trained Random Forest model.
 
 ## Dataset
 
@@ -228,21 +253,29 @@ Current held-out test results:
 - `RMSE = 0.1568`
 - `R² = 0.5750`
 
-The trained model artifact is generated locally when you run `python3 train_model.py`.
+Generated artifacts after training:
+
+- `artifacts/model.joblib`
+- `artifacts/metrics.json`
+- `artifacts/feature_importance.csv`
+
+If these artifacts are missing, the project can regenerate them locally by running `python3 train_model.py`. The application also supports a load-or-train flow when the saved model is unavailable.
 
 ## Website
 
 The web app allows you to:
 
-- enter army and defense values manually
+- build the attack setup in a separate step
+- configure the defending base in a separate step
 - use base presets for quick testing
 - estimate the probability of success for a chosen attack
 - compare your current army with stronger recommended strategies
 - inspect structured summaries of selected attack and defense inputs
+- view model metrics and recommendation reasons directly in the results page
 
 Local URL:
 
-- [http://127.0.0.1:5000](http://127.0.0.1:5000)
+- [http://127.0.0.1:5000/attack](http://127.0.0.1:5000/attack)
 
 ## API
 
